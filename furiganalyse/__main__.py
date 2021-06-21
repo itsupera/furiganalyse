@@ -38,33 +38,31 @@ def process_html(inputfile: str, outputfile = None):
     if not outputfile:
         outputfile = inputfile
 
-    with open(outputfile, 'w', encoding='utf-8') as out:
-        content = ET.tostring(tree.getroot()).decode("utf-8")
-        out.write(
-            # FIXME clean up this !
-            content.replace('<ruby>', '<html:ruby>').replace('<rb>', '<html:rb>').replace('<rt>', '<html:rt>')
-                .replace('</ruby>', '</html:ruby>').replace('</rb>', '</html:rb>').replace('</rt>', '</html:rt>')
-        )
-
-    # tree.write(outputfile)
+    tree.write(outputfile)
 
 
 def process_tree(tree: ET.ElementTree):
     # parent_map = dict((c, p) for p in tree.iter() for c in p)
 
     # TODO also replace in <title> elems
-    for p in tree.findall('.//{http://www.w3.org/1999/xhtml}p'):
+    ps = tree.findall('.//{http://www.w3.org/1999/xhtml}p')
+    for p in ps:
         if p.text:
             new_text = create_furigana_html(p.text)
 
             # Need to wrap the child <ruby> elements in something before we copy them
-            elem = ET.fromstring(f"""<p>{new_text}</p>""")
-            new_childs = list(elem)
+            new_elem = ET.fromstring(f"""<p>{new_text}</p>""")
+            new_childs = list(new_elem)
             for new_child in reversed(new_childs):
                 p.insert(0, new_child)
 
             # Remove the original text, as it was replaced by the <ruby> childs
             p.text = None
+
+    # Add the namespace to our new elements
+    elems = tree.findall('.//{}*')
+    for elem in elems:
+        elem.tag = "{http://www.w3.org/1999/xhtml}" + elem.tag
 
 
 if __name__ == '__main__':
