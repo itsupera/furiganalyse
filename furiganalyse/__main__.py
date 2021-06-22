@@ -56,30 +56,55 @@ def process_tree(tree: ET.ElementTree):
     namespace = "{http://www.w3.org/1999/xhtml}"
     ps = tree.findall(f'.//{namespace}*')
     for p in ps:
-        if not p.text:
-            continue
-        text = p.text.strip()
-        if contains_kanji(text):
-            new_text = create_furigana_html(text)
-
-            # Need to wrap the child <ruby> elements in something before we copy them
-            try:
-                new_elem = ET.fromstring(f"""<p>{new_text}</p>""")
-            except ET.ParseError:
-                logging.error(f"XML parsing failed for {new_text}, which was generated from: {text}")
-                raise
-
-            new_childs = list(new_elem)
-            for new_child in reversed(new_childs):
-                p.insert(0, new_child)
-
-            # Remove the original text, as it was replaced by the <ruby> childs
-            p.text = None
+        if p.text:
+            process_text(p)
+        if p.tail:
+            process_tail(p)
 
     # Add the namespace to our new elements
     elems = tree.findall('.//{}*')
     for elem in elems:
         elem.tag = namespace + elem.tag
+
+
+def process_text(p: ET.Element):
+    text = p.text.strip()
+    if contains_kanji(text):
+        new_text = create_furigana_html(text)
+
+        # Need to wrap the child <ruby> elements in something before we copy them
+        try:
+            new_elem = ET.fromstring(f"""<p>{new_text}</p>""")
+        except ET.ParseError:
+            logging.error(f"XML parsing failed for {new_text}, which was generated from: {text}")
+            raise
+
+        new_childs = list(new_elem)
+        for new_child in reversed(new_childs):
+            p.insert(0, new_child)
+
+        # Remove the original text, as it was replaced by the <ruby> childs
+        p.text = None
+
+
+def process_tail(p: ET.Element):
+    text = p.tail.strip()
+    if contains_kanji(text):
+        new_text = create_furigana_html(text)
+
+        # Need to wrap the child <ruby> elements in something before we copy them
+        try:
+            new_elem = ET.fromstring(f"""<p>{new_text}</p>""")
+        except ET.ParseError:
+            logging.error(f"XML parsing failed for {new_text}, which was generated from: {text}")
+            raise
+
+        new_childs = list(new_elem)
+        for new_child in new_childs:
+            p.append(new_child)
+
+        # Remove the original text, as it was replaced by the <ruby> childs
+        p.tail = None
 
 
 kanji_pattern = re.compile(f"[一-龯]")
