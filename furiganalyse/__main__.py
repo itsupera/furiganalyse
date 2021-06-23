@@ -4,6 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from tempfile import TemporaryDirectory
+from typing import Optional, Tuple, List
 
 import typer
 from furigana.furigana import create_furigana_html
@@ -39,7 +40,7 @@ def main(inputfile: str, outputfile: str):
                     logging.info(f"    Adding {rel_file}")
 
 
-def process_html(inputfile: str, outputfile = None):
+def process_html(inputfile: str, outputfile: Optional[str] = None):
     tree = ET.parse(inputfile)
     process_tree(tree)
 
@@ -55,8 +56,11 @@ def process_tree(tree: ET.ElementTree):
     namespace = "{http://www.w3.org/1999/xhtml}"
     ps = tree.findall(f'.//{namespace}*')
     for p in ps:
-        process_text(p)
-        process_tail(p, parent_map[p])
+        if not p.tag.endswith("rt"):
+            logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
+            process_head(p)
+            process_tail(p, parent_map[p])
+            logging.debug(f">>> AFTER  {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
 
     # Add the namespace to our new elements
     elems = tree.findall('.//{}*')
@@ -64,52 +68,62 @@ def process_tree(tree: ET.ElementTree):
         elem.tag = namespace + elem.tag
 
 
-def process_text(p: ET.Element):
-    if not p.text:
+def process_head(elem: ET.Element):
+    """
+    Process the text that is before the children of the given element.
+    """
+    if not elem.text or elem.tag.endswith("ruby"):
         return
 
-    text = p.text.strip()
+    text = elem.text.strip()
     if contains_kanji(text):
-        new_text = create_furigana_html(text)
 
-        # Need to wrap the child <ruby> elements in something before we copy them
-        try:
-            new_elem = ET.fromstring(f"""<p>{new_text}</p>""")
-        except ET.ParseError:
-            logging.error(f"XML parsing failed for {new_text}, which was generated from: {text}")
-            raise
+        head, children, tail = create_parsed_furigana_html(text)
 
         # Replace the original text by the ruby childs "head"
-        p.text = new_elem.text
+        elem.text = head
 
-        new_childs = list(new_elem)
-        for new_child in reversed(new_childs):
-            p.insert(0, new_child)
+        # Insert the children at the beginning
+        for child in reversed(children):
+            elem.insert(0, child)
 
 
-def process_tail(p: ET.Element, parent_elem: ET.Element):
-    if not p.tail:
+def process_tail(elem: ET.Element, parent_elem: ET.Element):
+    """
+    Process the text that is before the children of the given element.
+    """
+    if not elem.tail:
         return
 
-    text = p.tail.strip()
+    text = elem.tail.strip()
     if contains_kanji(text):
-        processed_text = create_furigana_html(text)
 
-        # Need to wrap the child <ruby> elements in something before we copy them
-        try:
-            new_elem = ET.fromstring(f"""<p>{processed_text}</p>""")
-        except ET.ParseError:
-            logging.error(f"XML parsing failed for {processed_text}, which was generated from: {text}")
-            raise
+        head, children, tail = create_parsed_furigana_html(text)
 
         # Replace the original tail by the rubys "head"
-        p.tail = new_elem.text
+        elem.tail = head
 
-        # Insert the ruby childs just after the element
-        idx = list(parent_elem).index(p)
-        new_childs = list(new_elem)
-        for new_child in reversed(new_childs):
-            parent_elem.insert(idx + 1, new_child)
+        # Insert the ruby children just after the element
+        idx = list(parent_elem).index(elem)
+        for child in reversed(children):
+            parent_elem.insert(idx + 1, child)
+
+
+def create_parsed_furigana_html(text: str) -> Tuple[str, List[ET.Element], str]:
+    """
+    Generate the furigana and return it parsed: "head" text, <ruby> children, "tail" text.
+    """
+    new_text = create_furigana_html(text)
+
+    # Need to wrap the children <ruby> elements in something to parse them
+    try:
+        elem = ET.fromstring(f"""<p>{new_text}</p>""")
+    except ET.ParseError:
+        logging.error(f"XML parsing failed for {new_text}, which was generated from: {text}")
+        raise
+
+    # Return the parts that will need to be integrated in the XML tree
+    return elem.text, list(elem), elem.tail
 
 
 kanji_pattern = re.compile(f"[一-龯]")
