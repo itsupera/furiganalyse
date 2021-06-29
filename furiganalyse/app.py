@@ -1,0 +1,103 @@
+import base64
+import logging
+import os
+import random
+import string
+import traceback
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from werkzeug.utils import secure_filename
+from flask import Flask, request, redirect, send_file, render_template
+
+from furiganalyse.__main__ import main
+
+
+UPLOAD_FOLDER = '/tmp/uploads/'
+OUTPUT_FOLDER = '/tmp/furiganalysed/'
+app = Flask(__name__, template_folder='./templates')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
+Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
+Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
+
+
+@app.route("/", methods=['GET'])
+def get_root():
+    return render_template('upload.html')
+
+
+# Upload API
+@app.route('/upload-file', methods=['GET', 'POST'])
+def get_post_upload_file():
+    if request.method == 'GET':
+        return render_template('upload_file.html')
+
+    # check if the post request has the file part
+    if 'file' not in request.files:
+        return redirect(request.url)
+    file = request.files['file']
+
+    # if user does not select file, browser also
+    # submit a empty part without filename
+    if file.filename == '':
+        return redirect(request.url)
+
+    filename = secure_filename(file.filename)
+    output_filepath = filename_to_output_filepath(filename)
+    path_hash = encode_filepath(output_filepath)
+
+    with TemporaryDirectory(dir=app.config['UPLOAD_FOLDER']) as td:
+        tmpfile = os.path.join(td, filename)
+        file.save(tmpfile)
+        try:
+            main(tmpfile, output_filepath)
+        except Exception:
+            logging.error(f"Error while processing {tmpfile}: {traceback.format_exc()}")
+            return redirect('/error-file/' + filename)
+
+    # send file name as parameter to downlad
+    return redirect('/download-file/' + path_hash)
+
+
+@app.route("/error-file/<filename>", methods=['GET'])
+def get_error_file(filename):
+    return render_template('error.html', value=filename)
+
+
+# Download API
+@app.route("/download-file/<path_hash>", methods=['GET'])
+def get_download_file(path_hash):
+    return render_template('download.html', value=path_hash)
+
+
+@app.route('/files/<path_hash>')
+def get_files(path_hash):
+    file_path = decode_filepath(path_hash)
+    if not file_path.startswith(app.config['OUTPUT_FOLDER']):
+        return render_template('error.html', value=os.path.basename(file_path))
+
+    attachment_filename = "furiganalysed_" + os.path.basename(file_path)
+    return send_file(file_path, as_attachment=True, attachment_filename=attachment_filename)
+
+
+def filename_to_output_filepath(filename):
+    output_filepath = os.path.join(app.config['OUTPUT_FOLDER'], generate_random_key(12), filename)
+    Path(output_filepath).parent.mkdir(parents=True)
+    return output_filepath
+
+
+def generate_random_key(length):
+    return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(length))
+
+
+def encode_filepath(filepath):
+    return str(base64.urlsafe_b64encode(filepath.encode("utf-8")), "utf-8")
+
+
+def decode_filepath(hashed_path):
+    return str(base64.urlsafe_b64decode(hashed_path.encode("utf-8")), "utf-8")
+
+
+if __name__ == "__main__":
+    app.run(host='127.0.0.1')

@@ -18,4 +18,5 @@ RUN pip3 install -e .
 # Add the sources
 ADD furiganalyse furiganalyse
 
-ENTRYPOINT ["python3", "-m", "furiganalyse"]
+# ENTRYPOINT ["python3", "-m", "furiganalyse"]
+ENTRYPOINT ["python3", "-m", "furiganalyse.app"]
