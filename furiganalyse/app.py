@@ -2,6 +2,7 @@ import base64
 import logging
 import os
 import random
+import shutil
 import string
 import traceback
 from pathlib import Path
@@ -46,6 +47,8 @@ def get_post_upload_file():
     filename = secure_filename(file.filename)
     output_filepath = filename_to_output_filepath(filename)
     path_hash = encode_filepath(output_filepath)
+
+    cleanup_output_folder()
 
     with TemporaryDirectory(dir=app.config['UPLOAD_FOLDER']) as td:
         tmpfile = os.path.join(td, filename)
@@ -97,6 +100,32 @@ def encode_filepath(filepath):
 
 def decode_filepath(hashed_path):
     return str(base64.urlsafe_b64decode(hashed_path.encode("utf-8")), "utf-8")
+
+
+def cleanup_output_folder():
+    """
+    Keep the total size of output folder below a threshold, thrashing from the older files when needed.
+    """
+    size_threshold = int(100e6)  # 100MB
+
+    output_folder = Path(app.config['OUTPUT_FOLDER'])
+    paths = sorted(output_folder.iterdir(), key=os.path.getctime)
+
+    path_and_sizes = []
+    total_size = 0
+    for path in paths:
+        size = sum(f.stat().st_size for f in path.glob('**/*') if f.is_file())
+        path_and_sizes.append((path, size))
+        total_size += size
+
+    if total_size < size_threshold:
+        return
+    for path, size in path_and_sizes:
+        logging.info(f"Removing {path} to free up space")
+        shutil.rmtree(path)
+        total_size -= size
+        if total_size < size_threshold:
+            break
 
 
 if __name__ == "__main__":
