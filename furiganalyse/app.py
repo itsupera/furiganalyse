@@ -32,7 +32,7 @@ def get_root():
 @app.route('/upload-file', methods=['GET', 'POST'])
 def get_post_upload_file():
     if request.method == 'GET':
-        return render_template('upload_file.html')
+        return render_template('upload.html')
 
     # check if the post request has the file part
     if 'file' not in request.files:
