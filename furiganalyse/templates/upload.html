@@ -1,9 +1,29 @@
 <!doctype html>
+    <script type="text/javascript">
+        function checkForm(form) // Submit button clicked
+        {
+            //
+            // check form input values
+            //
+
+            form.upload.disabled = true;
+            form.upload.value = "Please wait...";
+            return true;
+        }
+
+        function resetForm(form) // Reset button clicked
+        {
+            form.upload.disabled = false;
+            form.upload.value = "Upload";
+        }
+    </script>
+
     <title>Upload an ebook to furiganalyse</title>
     <h1>Upload an ebook to furiganalyse</h1>
-    <form action="/upload-file" method=post enctype=multipart/form-data>
-      <p><input type=file name=file>
-         <input type=submit value=Upload>
+    <form action="/upload-file" method=post enctype=multipart/form-data onsubmit="return checkForm(this);">
+      <p>
+         <input type=file name=file onclick="resetForm(this.form);">
+         <input type=submit name="upload" value=Upload>
     </form>
     <div>
         <p>
