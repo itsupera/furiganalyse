@@ -14,8 +14,8 @@ from flask import Flask, request, redirect, send_file, render_template
 from furiganalyse.__main__ import main
 
 
-UPLOAD_FOLDER = '/tmp/uploads/'
-OUTPUT_FOLDER = '/tmp/furiganalysed/'
+UPLOAD_FOLDER = '/tmp/furiganalysed_uploads/'
+OUTPUT_FOLDER = '/tmp/furiganalysed_downloads/'
 app = Flask(__name__, template_folder='./templates')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
@@ -129,4 +129,4 @@ def cleanup_output_folder():
 
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1')
+    app.run(host='0.0.0.0')
