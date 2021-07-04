@@ -4,15 +4,19 @@ import re
 import xml.etree.ElementTree as ET
 import zipfile
 from tempfile import TemporaryDirectory
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Literal
 
 import typer
 from furigana.furigana import create_furigana_html
 
 logging.basicConfig(level=logging.INFO)
 
+NAMESPACE = "{http://www.w3.org/1999/xhtml}"
 
-def main(inputfile: str, outputfile: str):
+Mode = Literal["add", "replace", "remove"]
+
+
+def main(inputfile: str, outputfile: str, mode: Mode = "add"):
     with TemporaryDirectory() as td:
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
@@ -26,7 +30,7 @@ def main(inputfile: str, outputfile: str):
                 if file.lower().split('.')[-1] in {"html", "xhtml"}:
                     logging.info(f"    Processing {file}")
                     html_filepath = os.path.join(root, file)
-                    process_html(html_filepath)
+                    process_html(html_filepath, mode)
 
         logging.info("Creating the archive ...")
         with zipfile.ZipFile(outputfile, 'w') as zip_out:
@@ -40,9 +44,9 @@ def main(inputfile: str, outputfile: str):
                     logging.info(f"    Adding {rel_file}")
 
 
-def process_html(inputfile: str, outputfile: Optional[str] = None):
+def process_html(inputfile: str, mode: Mode, outputfile: Optional[str] = None):
     tree = ET.parse(inputfile)
-    process_tree(tree)
+    process_tree(tree, mode)
 
     if not outputfile:
         outputfile = inputfile
@@ -50,22 +54,54 @@ def process_html(inputfile: str, outputfile: Optional[str] = None):
     tree.write(outputfile)
 
 
-def process_tree(tree: ET.ElementTree):
+def process_tree(tree: ET.ElementTree, mode: Mode):
     parent_map = dict((c, p) for p in tree.iter() for c in p)
 
-    namespace = "{http://www.w3.org/1999/xhtml}"
-    ps = tree.findall(f'.//{namespace}*')
-    for p in ps:
-        if not p.tag.endswith("rt"):
-            logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
-            process_head(p)
-            process_tail(p, parent_map[p])
-            logging.debug(f">>> AFTER  {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
+    if mode in {"remove", "replace"}:
+        remove_existing_furigana(tree, parent_map)
 
-    # Add the namespace to our new elements
-    elems = tree.findall('.//{}*')
+    if mode in {"add", "replace"}:
+        ps = tree.findall(f'.//{NAMESPACE}*')
+        for p in ps:
+            if not p.tag.endswith("rt"):
+                logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
+                process_head(p)
+                process_tail(p, parent_map[p])
+                logging.debug(f">>> AFTER  {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
+
+        # Add the namespace to our new elements
+        elems = tree.findall('.//{}*')
+        for elem in elems:
+            elem.tag = NAMESPACE + elem.tag
+
+
+def remove_existing_furigana(tree: ET.ElementTree, parent_map: dict):
+    """
+    Replace all existing ruby elements by their text, e.g., <ruby>X<rt>Y</rt></ruby> becomes X.
+    """
+    elems = tree.findall(f'.//{NAMESPACE}ruby')
     for elem in elems:
-        elem.tag = namespace + elem.tag
+        # Remove all the children, e.g., the readings
+        for child in list(elem):
+            elem.remove(child)
+
+        # Replacing the node the its text and tail
+        new_text = (elem.text or "") + (elem.tail or "")
+
+        parent_elem = parent_map[elem]
+
+        # Find the previous child to append our new text to it
+        idx = list(parent_elem).index(elem)
+        if idx == 0:
+            # If our element was the first child, append to parent node's text
+            parent_elem.text = (parent_elem.text or "") + new_text
+        else:
+            # Otherwise, append to the tail of previous children
+            previous_elem = parent_elem[idx - 1]
+            previous_elem.tail = (previous_elem.tail or "") + new_text
+
+        # Finally, remove our ruby element from its parent
+        parent_elem.remove(elem)
 
 
 def process_head(elem: ET.Element):

@@ -54,7 +54,7 @@ def get_post_upload_file():
         tmpfile = os.path.join(td, filename)
         file.save(tmpfile)
         try:
-            main(tmpfile, output_filepath)
+            main(tmpfile, output_filepath, mode=request.form['mode'])
         except Exception:
             logging.error(f"Error while processing {tmpfile}: {traceback.format_exc()}")
             return redirect('/error-file/' + filename)
