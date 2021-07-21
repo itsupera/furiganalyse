@@ -81,12 +81,18 @@ def remove_existing_furigana(tree: ET.ElementTree, parent_map: dict):
     """
     elems = tree.findall(f'.//{NAMESPACE}ruby')
     for elem in elems:
-        # Remove all the children, e.g., the readings
+        # Remove all the <rt> children, e.g., the readings, but keep the text from other childs
+        childs_text = []
         for child in list(elem):
+            if not child.tag.endswith("rt") and not child.tag.endswith("rp"):
+                text = (child.text or "") + (child.tail or "")
+            else:
+                text = child.tail or ""
+            childs_text.append(text)
             elem.remove(child)
 
-        # Replacing the node the its text and tail
-        new_text = (elem.text or "") + (elem.tail or "")
+        # Replacing the node the its text, childs text and tail
+        new_text = (elem.text or "") + "".join(childs_text) + (elem.tail or "")
 
         parent_elem = parent_map[elem]
 

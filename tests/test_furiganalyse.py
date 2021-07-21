@@ -15,6 +15,18 @@ from furiganalyse.__main__ import process_tree
             '<body>はじめに、第一歩。終</body>',
         ),
         (
+            "Remove furigana, handling rb elements",
+            "<body>黒い服を着た大人<ruby><rb>達</rb><rt>たち</rt></ruby>の間に</body>",
+            "remove",
+            "<body>黒い服を着た大人達の間に</body>",
+        ),
+        (
+            "Remove furigana, handling rp elements",
+            "<body><ruby>漢<rp>(</rp><rt>Kan</rt><rp>)</rp>字<rp>(</rp><rt>ji</rt><rp>)</rp></ruby></body>",
+            "remove",
+            "<body>漢字</body>",
+        ),
+        (
             "Remove furigana, parent node with text",
             '<body><ruby>第一<rt>ファースト</rt></ruby></body>',
             "remove",
@@ -37,6 +49,12 @@ from furiganalyse.__main__ import process_tree
             '<body>はじめに、<ruby>第一<rt>ファースト</rt></ruby>歩。<ruby>終<rt>おわり</rt></ruby></body>',
             "replace",
             '<body>はじめに、<ruby>第一歩<rt>だいいっぽ</rt></ruby>。<ruby>終<rt>おわり</rt></ruby></body>',
+        ),
+        (
+            "Override furigana, handling rb elements",
+            "<body>大人<ruby><rb>達</rb><rt>あああ</rt></ruby>の間に</body>",
+            "replace",
+            "<body><ruby>大人<rt>おとな</rt></ruby><ruby>達<rt>たち</rt></ruby>の<ruby>間<rt>ま</rt></ruby>に</body>"
         ),
         (
             "Text may be positioned before, inside or after elements",
