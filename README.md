@@ -10,7 +10,7 @@ Furiganalyse
 
 Annotate Japanese ebooks (EPUB format) with furigana.
 
-Try it <a href="http://furiganalyse.eu-west-3.elasticbeanstalk.com/">here</a> !
+Try it <a href="http://furiganalyse.itsupera.co/">here</a> !
 
 Setup and run
 --------------
