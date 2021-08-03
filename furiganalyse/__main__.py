@@ -3,6 +3,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 import zipfile
+from enum import Enum
 from tempfile import TemporaryDirectory
 from typing import Optional, Tuple, List, Literal
 
@@ -13,10 +14,14 @@ logging.basicConfig(level=logging.INFO)
 
 NAMESPACE = "{http://www.w3.org/1999/xhtml}"
 
-Mode = Literal["add", "replace", "remove"]
+
+class Mode(str, Enum):
+    add = "add"
+    replace = "replace"
+    remove = "remove"
 
 
-def main(inputfile: str, outputfile: str, mode: Mode = "add"):
+def main(inputfile: str, outputfile: str, mode: Mode = Mode.add):
     with TemporaryDirectory() as td:
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
