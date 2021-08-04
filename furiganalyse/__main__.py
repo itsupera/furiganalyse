@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from enum import Enum
 from tempfile import TemporaryDirectory
-from typing import Optional, Tuple, List, Literal
+from typing import Tuple, List, Iterable
 
 import typer
 from furigana.furigana import create_furigana_html
@@ -21,7 +21,12 @@ class Mode(str, Enum):
     remove = "remove"
 
 
-def main(inputfile: str, outputfile: str, mode: Mode = Mode.add):
+class OutputFormat(str, Enum):
+    epub = "epub"
+    txt = "txt"
+
+
+def main(inputfile: str, outputfile: str, mode: Mode = Mode.add, output_format: OutputFormat = OutputFormat.epub):
     with TemporaryDirectory() as td:
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
@@ -32,15 +37,47 @@ def main(inputfile: str, outputfile: str, mode: Mode = Mode.add):
         logging.info("Processing the files ...")
         for root, _, files in os.walk(unzipped_input_fpath):
             for file in files:
-                if file.lower().split('.')[-1] in {"html", "xhtml"}:
+                if os.path.splitext(file)[1] in {".html", ".xhtml"}:
                     logging.info(f"    Processing {file}")
                     html_filepath = os.path.join(root, file)
-                    process_html(html_filepath, mode)
+                    tree = process_html(html_filepath, mode)
+                    if output_format == OutputFormat.txt:
+                        txt_outputfile = os.path.splitext(html_filepath)[0] + '.txt'
+                        convert_html_to_txt(tree, txt_outputfile)
+                    else:
+                        tree.write(html_filepath)
 
         logging.info("Creating the archive ...")
-        with zipfile.ZipFile(outputfile, 'w') as zip_out:
-            for folder_name, _, filenames in os.walk(unzipped_input_fpath):
-                for filename in filenames:
+        if output_format == OutputFormat.epub:
+            write_epub_archive(unzipped_input_fpath, outputfile)
+        else:
+            write_txt_archive(unzipped_input_fpath, outputfile)
+
+
+def write_epub_archive(unzipped_input_fpath: str, outputfile: str):
+    """
+    Write the modified extracted EPUB archive to a new archive file.
+    """
+    with zipfile.ZipFile(outputfile, 'w') as zip_out:
+        for folder_name, _, filenames in os.walk(unzipped_input_fpath):
+            for filename in filenames:
+                rel_dir = os.path.relpath(folder_name, unzipped_input_fpath)
+                rel_file = os.path.join(rel_dir, filename)
+                file_path = os.path.join(folder_name, filename)
+                # Add file to zip
+                zip_out.write(file_path, rel_file)
+                logging.info(f"    Adding {rel_file}")
+
+
+def write_txt_archive(unzipped_input_fpath: str, outputfile: str):
+    """
+    Only keep the converted txt files within the archive.
+    """
+    with zipfile.ZipFile(outputfile, 'w') as zip_out:
+        for folder_name, _, filenames in os.walk(unzipped_input_fpath):
+            for filename in filenames:
+                extension = os.path.splitext(filename)[1]
+                if extension == ".txt":
                     rel_dir = os.path.relpath(folder_name, unzipped_input_fpath)
                     rel_file = os.path.join(rel_dir, filename)
                     file_path = os.path.join(folder_name, filename)
@@ -49,14 +86,10 @@ def main(inputfile: str, outputfile: str, mode: Mode = Mode.add):
                     logging.info(f"    Adding {rel_file}")
 
 
-def process_html(inputfile: str, mode: Mode, outputfile: Optional[str] = None):
+def process_html(inputfile: str, mode: Mode) -> ET.ElementTree:
     tree = ET.parse(inputfile)
     process_tree(tree, mode)
-
-    if not outputfile:
-        outputfile = inputfile
-
-    tree.write(outputfile)
+    return tree
 
 
 def process_tree(tree: ET.ElementTree, mode: Mode):
@@ -178,6 +211,23 @@ kanji_pattern = re.compile(f"[一-龯]")
 
 def contains_kanji(text: str) -> bool:
     return bool(kanji_pattern.search(text))
+
+
+def convert_html_to_txt(tree, outputfile):
+    with open(outputfile, "w") as fd:
+        for line in convert_html_to_txt_lines(tree):
+            fd.write(line)
+
+
+def convert_html_to_txt_lines(tree) -> Iterable[str]:
+    rts = tree.findall(f'.//{NAMESPACE}rt')
+    for rt in rts:
+        rt.text = "(" + (rt.text or "")
+        rt.tail = (rt.tail or "") + ")"
+
+    ps = tree.findall(f'.//{NAMESPACE}p')
+    for p in ps:
+        yield ET.tostring(p, encoding="utf-8", method="text").decode("utf-8")
 
 
 if __name__ == '__main__':
