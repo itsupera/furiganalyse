@@ -45,7 +45,7 @@ def main(inputfile: str, outputfile: str, mode: Mode = Mode.add, output_format: 
                         txt_outputfile = os.path.splitext(html_filepath)[0] + '.txt'
                         convert_html_to_txt(tree, txt_outputfile)
                     else:
-                        tree.write(html_filepath)
+                        tree.write(html_filepath, encoding="utf-8")
 
         logging.info("Creating the archive ...")
         if output_format == OutputFormat.epub:
