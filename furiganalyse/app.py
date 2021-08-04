@@ -11,8 +11,7 @@ from tempfile import TemporaryDirectory
 from werkzeug.utils import secure_filename
 from flask import Flask, request, redirect, send_file, render_template
 
-from furiganalyse.__main__ import main
-
+from furiganalyse.__main__ import main, OutputFormat
 
 UPLOAD_FOLDER = '/tmp/furiganalysed_uploads/'
 OUTPUT_FOLDER = '/tmp/furiganalysed_downloads/'
@@ -44,8 +43,10 @@ def get_post_upload_file():
     if file.filename == '':
         return redirect(request.url)
 
+    output_format = OutputFormat(request.form["of"])
+
     filename = secure_filename(file.filename)
-    output_filepath = filename_to_output_filepath(filename)
+    output_filepath = filename_to_output_filepath(filename, output_format)
     path_hash = encode_filepath(output_filepath)
 
     cleanup_output_folder()
@@ -54,7 +55,7 @@ def get_post_upload_file():
         tmpfile = os.path.join(td, filename)
         file.save(tmpfile)
         try:
-            main(tmpfile, output_filepath, mode=request.form['mode'])
+            main(tmpfile, output_filepath, mode=request.form['mode'], output_format=output_format)
         except Exception:
             logging.error(f"Error while processing {tmpfile}: {traceback.format_exc()}")
             return redirect('/error-file/' + filename)
@@ -84,8 +85,11 @@ def get_files(path_hash):
     return send_file(file_path, as_attachment=True, attachment_filename=attachment_filename)
 
 
-def filename_to_output_filepath(filename):
-    output_filepath = os.path.join(app.config['OUTPUT_FOLDER'], generate_random_key(12), filename)
+def filename_to_output_filepath(filename: str, output_format: OutputFormat) -> str:
+    filename_without_ext = os.path.splitext(filename)[0]
+    extension = ".epub" if output_format == OutputFormat.epub else ".zip"
+    output_filename = filename_without_ext + extension
+    output_filepath = os.path.join(app.config['OUTPUT_FOLDER'], generate_random_key(12), output_filename)
     Path(output_filepath).parent.mkdir(parents=True)
     return output_filepath
 
