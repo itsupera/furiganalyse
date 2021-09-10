@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from enum import Enum
 from tempfile import TemporaryDirectory
-from typing import Tuple, List, Iterable
+from typing import Tuple, List, Iterable, Optional
 
 import typer
 from furigana.furigana import create_furigana_html
@@ -26,7 +26,19 @@ class OutputFormat(str, Enum):
     txt = "txt"
 
 
-def main(inputfile: str, outputfile: str, mode: Mode = Mode.add, output_format: OutputFormat = OutputFormat.epub):
+class WritingMode(str, Enum):
+    horizontal_tb = "horizontal-tb"
+    vertical_rl = "vertical-rl"
+    vertical_lr = "vertical-lr"
+
+
+def main(
+    inputfile: str,
+    outputfile: str,
+    mode: Mode = Mode.add,
+    output_format: OutputFormat = OutputFormat.epub,
+    writing_mode: Optional[WritingMode] = None,
+):
     with TemporaryDirectory() as td:
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
@@ -35,6 +47,9 @@ def main(inputfile: str, outputfile: str, mode: Mode = Mode.add, output_format: 
             zip_ref.extractall(unzipped_input_fpath)
 
         logging.info("Processing the files ...")
+        if writing_mode is not None:
+            update_writing_mode(unzipped_input_fpath, writing_mode)
+
         for root, _, files in os.walk(unzipped_input_fpath):
             for file in files:
                 if os.path.splitext(file)[1] in {".html", ".xhtml"}:
@@ -52,6 +67,18 @@ def main(inputfile: str, outputfile: str, mode: Mode = Mode.add, output_format: 
             write_epub_archive(unzipped_input_fpath, outputfile)
         else:
             write_txt_archive(unzipped_input_fpath, outputfile)
+
+
+def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
+    css_filepath = os.path.join(unzipped_input_fpath, "stylesheet.css")
+    with open(css_filepath) as fd:
+        css_content = fd.read()
+
+    pattern = re.compile(r"-webkit-writing-mode: [^;\n]+")
+    css_content = pattern.sub(f"-webkit-writing-mode: {writing_mode}", css_content)
+
+    with open(css_filepath, "w") as fd:
+        fd.write(css_content)
 
 
 def write_epub_archive(unzipped_input_fpath: str, outputfile: str):
