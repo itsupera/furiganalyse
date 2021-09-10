@@ -104,6 +104,12 @@ from furiganalyse.__main__ import process_tree
             "add",
             '<body>はじめに、<ruby>第一<rt>ファースト</rt></ruby><ruby>歩<rt>ふ</rt></ruby>。</body>',
         ),
+        (
+            "Tag inside of ruby subtags",
+            '<body><ruby>一<rb><span>辿</span></rb><rt><span>たど</span></rt>二</ruby>三</body>',
+            "add",
+            '<body><ruby>一<rb><span>辿</span></rb><rt><span>たど</span></rt>二</ruby><ruby>三<rt>さん</rt></ruby></body>',
+        ),
     ]
 )
 def test_process_tree(test_case, xml_str, mode, expected_xml_str):

@@ -128,7 +128,8 @@ def process_tree(tree: ET.ElementTree, mode: Mode):
     if mode in {"add", "replace"}:
         ps = tree.findall(f'.//{NAMESPACE}*')
         for p in ps:
-            if not p.tag.endswith("rt"):
+            # Exclude ruby related tags, we don't want to override them (unless we have removed them before)
+            if not inside_ruby_subtag(p, parent_map):
                 logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
                 process_head(p)
                 process_tail(p, parent_map[p])
@@ -138,6 +139,17 @@ def process_tree(tree: ET.ElementTree, mode: Mode):
         elems = tree.findall('.//{}*')
         for elem in elems:
             elem.tag = NAMESPACE + elem.tag
+
+
+def inside_ruby_subtag(elem: ET.Element, parent_map):
+    """
+    Returns True if any of the ascendant tags is a ruby subtag (<rt>, <rb> or <rp>)
+    """
+    while elem is not None:
+        if any((elem.tag.endswith(tag) for tag in {"rt", "rb", "rp"})):
+            return True
+        elem = parent_map.get(elem)
+    return False
 
 
 def remove_existing_furigana(tree: ET.ElementTree, parent_map: dict):
