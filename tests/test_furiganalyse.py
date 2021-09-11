@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from furiganalyse.__main__ import process_tree
+from furiganalyse.parsing import process_tree
 
 
 @pytest.mark.parametrize(

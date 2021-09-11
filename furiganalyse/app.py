@@ -8,10 +8,10 @@ import traceback
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from werkzeug.utils import secure_filename
 from flask import Flask, request, redirect, send_file, render_template
 
-from furiganalyse.__main__ import main, OutputFormat
+from furiganalyse.__main__ import main
+from furiganalyse.params import OutputFormat
 
 UPLOAD_FOLDER = '/tmp/furiganalysed_uploads/'
 OUTPUT_FOLDER = '/tmp/furiganalysed_downloads/'
@@ -58,7 +58,7 @@ def get_post_upload_file():
             main(
                 tmpfile,
                 output_filepath,
-                mode=request.form['mode'],
+                furigana_mode=request.form['furigana_mode'],
                 output_format=output_format,
                 writing_mode=request.form['writing_mode'],
             )
