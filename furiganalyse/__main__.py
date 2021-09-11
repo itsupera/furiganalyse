@@ -1,12 +1,14 @@
 import logging
 import os
+import random
 import re
 import xml.etree.ElementTree as ET
 import zipfile
 from enum import Enum
 from tempfile import TemporaryDirectory
-from typing import Tuple, List, Iterable, Optional
+from typing import Tuple, List, Iterable, Optional, Iterator
 
+import genanki
 import typer
 from furigana.furigana import create_furigana_html
 
@@ -23,7 +25,9 @@ class Mode(str, Enum):
 
 class OutputFormat(str, Enum):
     epub = "epub"
-    txt = "txt"
+    many_txt = "many_txt"
+    single_txt = "single_txt"
+    apkg = "apkg"
 
 
 class WritingMode(str, Enum):
@@ -56,7 +60,7 @@ def main(
                     logging.info(f"    Processing {file}")
                     html_filepath = os.path.join(root, file)
                     tree = process_html(html_filepath, mode)
-                    if output_format == OutputFormat.txt:
+                    if output_format in {OutputFormat.many_txt, OutputFormat.single_txt, OutputFormat.apkg}:
                         txt_outputfile = os.path.splitext(html_filepath)[0] + '.txt'
                         convert_html_to_txt(tree, txt_outputfile)
                     else:
@@ -65,8 +69,15 @@ def main(
         logging.info("Creating the archive ...")
         if output_format == OutputFormat.epub:
             write_epub_archive(unzipped_input_fpath, outputfile)
-        else:
+        elif output_format == OutputFormat.many_txt:
             write_txt_archive(unzipped_input_fpath, outputfile)
+        elif output_format == OutputFormat.single_txt:
+            concat_txt_files(unzipped_input_fpath, outputfile)
+        elif output_format == OutputFormat.apkg:
+            deck_name = os.path.splitext(os.path.basename(inputfile))[0]
+            generate_anki_deck(unzipped_input_fpath, deck_name, outputfile)
+        else:
+            raise ValueError("Invalid writing mode")
 
 
 def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
@@ -111,6 +122,75 @@ def write_txt_archive(unzipped_input_fpath: str, outputfile: str):
                     # Add file to zip
                     zip_out.write(file_path, rel_file)
                     logging.info(f"    Adding {rel_file}")
+
+
+def iter_txt_lines(unzipped_input_fpath: str) -> Iterator[str]:
+    for root, _, files in sorted(os.walk(unzipped_input_fpath)):
+        for file in sorted(files):
+            if os.path.splitext(file)[1] == ".txt":
+                filepath = os.path.join(root, file)
+                with open(filepath) as fd:
+                    for line in fd:
+                        yield line
+
+
+def concat_txt_files(unzipped_input_fpath: str, outputfile: str):
+    with open(outputfile, "w") as fd:
+        for line in iter_txt_lines(unzipped_input_fpath):
+            fd.write(line)
+
+
+def generate_anki_deck(unzipped_input_fpath: str, deck_name: str, anki_deck_filepath: str):
+    model_id = random.randrange(1 << 30, 1 << 31)
+    model = genanki.Model(
+        model_id,
+        'Sentence cards (furiganalyse)',
+        fields=[
+            {'name': 'Sentence'},
+            {'name': 'Word'},
+            {'name': 'Definition'},
+        ],
+        templates=[
+            {
+                'name': 'Sentence to Word Definition',
+                'qfmt': '{{Sentence}}',
+                'afmt': '{{FrontSide}}<hr id="answer">{{Word}}<br>{{Definition}}',
+            },
+        ])
+
+    deck_id = random.randrange(1 << 30, 1 << 31)
+    description = 'Deck generated with <a href="https://github.com/itsupera/furiganalyse">furiganalyse</a><br/>' \
+                  'If you can, please consider <a href="https://www.buymeacoffee.com/itsupera">donating</a> ' \
+                  'to support my work, thank you !'
+    deck = genanki.Deck(
+        deck_id,
+        deck_name,
+        description
+    )
+
+    package = genanki.Package(deck)
+    package.media_files = []
+
+    idx = 0
+    for line in iter_txt_lines(unzipped_input_fpath):
+        for sentence in extract_sentences(line):
+            note = genanki.Note(
+                model=model,
+                fields=[sentence, "", ""],
+                due=idx,
+            )
+            deck.add_note(note)
+            idx += 1
+
+    package.write_to_file(anki_deck_filepath)
+
+
+def extract_sentences(line: str) -> Iterator[str]:
+    sentences = line.split("。")
+    for sentence in sentences:
+        sentence = sentence.lstrip().rstrip()
+        if sentence:
+            yield sentence
 
 
 def process_html(inputfile: str, mode: Mode) -> ET.ElementTree:

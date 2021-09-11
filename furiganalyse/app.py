@@ -45,7 +45,7 @@ def get_post_upload_file():
 
     output_format = OutputFormat(request.form["of"])
 
-    filename = secure_filename(file.filename)
+    filename = file.filename
     output_filepath = filename_to_output_filepath(filename, output_format)
     path_hash = encode_filepath(output_filepath)
 
@@ -91,9 +91,17 @@ def get_files(path_hash):
     return send_file(file_path, as_attachment=True, attachment_filename=attachment_filename)
 
 
+OUTPUT_FORMAT_TO_EXTENSION = {
+    OutputFormat.epub: ".epub",
+    OutputFormat.many_txt: ".zip",
+    OutputFormat.single_txt: ".txt",
+    OutputFormat.apkg: ".apkg",
+}
+
+
 def filename_to_output_filepath(filename: str, output_format: OutputFormat) -> str:
     filename_without_ext = os.path.splitext(filename)[0]
-    extension = ".epub" if output_format == OutputFormat.epub else ".zip"
+    extension = OUTPUT_FORMAT_TO_EXTENSION[output_format]
     output_filename = filename_without_ext + extension
     output_filepath = os.path.join(app.config['OUTPUT_FOLDER'], generate_random_key(12), output_filename)
     Path(output_filepath).parent.mkdir(parents=True)
