@@ -4,6 +4,7 @@ import zipfile
 from tempfile import TemporaryDirectory
 from typing import Optional
 
+import pypandoc
 import typer
 
 from furiganalyse.apkg_format import generate_anki_deck
@@ -41,6 +42,10 @@ def main(
         elif output_format == OutputFormat.apkg:
             deck_name = os.path.splitext(os.path.basename(inputfile))[0]
             generate_anki_deck(unzipped_input_fpath, deck_name, outputfile)
+        elif output_format == OutputFormat.html:
+            tmpfilepath = os.path.join(td, "tmp.epub")
+            write_epub_archive(unzipped_input_fpath, tmpfilepath)
+            pypandoc.convert_file(tmpfilepath, 'html', outputfile=outputfile)
         else:
             raise ValueError("Invalid writing mode")
 

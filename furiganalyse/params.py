@@ -12,6 +12,7 @@ class OutputFormat(str, Enum):
     many_txt = "many_txt"
     single_txt = "single_txt"
     apkg = "apkg"
+    html = "html"
 
 
 class WritingMode(str, Enum):

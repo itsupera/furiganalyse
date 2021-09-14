@@ -32,6 +32,11 @@ RUN rm -rf mecab-ipadic-neologd
 # Setup MeCab to use mecab-ipadic-neologd dict by default
 RUN sed -i "s'^dicdir.*'dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd'g" /usr/local/etc/mecabrc
 
+# Need pandoc for EPUB to HTML conversion
+RUN apt-get update && apt-get install -y \
+  pandoc \
+  && rm -rf /var/lib/apt/lists/*
+
 # Setup our dependencies
 WORKDIR /workdir
 ADD setup.py .

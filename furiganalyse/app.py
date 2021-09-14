@@ -96,6 +96,7 @@ OUTPUT_FORMAT_TO_EXTENSION = {
     OutputFormat.many_txt: ".zip",
     OutputFormat.single_txt: ".txt",
     OutputFormat.apkg: ".apkg",
+    OutputFormat.html: ".html",
 }
 
 
