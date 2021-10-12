@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import zipfile
+from pathlib import Path
 
 from furiganalyse.params import OutputFormat, WritingMode
 from furiganalyse.parsing import process_html, convert_html_to_txt
@@ -25,15 +26,15 @@ def process_epub_file(unzipped_input_fpath, mode, writing_mode, output_format):
 
 
 def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
-    css_filepath = os.path.join(unzipped_input_fpath, "stylesheet.css")
-    with open(css_filepath) as fd:
-        css_content = fd.read()
+    for css_filepath in Path(unzipped_input_fpath).glob('css'):
+        with open(css_filepath) as fd:
+            css_content = fd.read()
 
-    pattern = re.compile(r"-webkit-writing-mode: [^;\n]+")
-    css_content = pattern.sub(f"-webkit-writing-mode: {writing_mode}", css_content)
+        pattern = re.compile(r"-webkit-writing-mode: [^;\n]+")
+        css_content = pattern.sub(f"-webkit-writing-mode: {writing_mode}", css_content)
 
-    with open(css_filepath, "w") as fd:
-        fd.write(css_content)
+        with open(css_filepath, "w") as fd:
+            fd.write(css_content)
 
 
 def write_epub_archive(unzipped_input_fpath: str, outputfile: str):
