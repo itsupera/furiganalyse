@@ -129,7 +129,11 @@ def create_parsed_furigana_html(text: str) -> Tuple[str, List[ET.Element], str]:
     """
     Generate the furigana and return it parsed: "head" text, <ruby> children, "tail" text.
     """
-    new_text = create_furigana_html(text)
+    try:
+        new_text = create_furigana_html(text)
+    except Exception:
+        logging.warning(f"Something wrong happened when retrieving furigana for '{text}'")
+        new_text = text
 
     # Need to wrap the children <ruby> elements in something to parse them
     try:
