@@ -4,13 +4,14 @@ import os
 import random
 import shutil
 import string
+import time
 import traceback
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from flask import Flask, request, redirect, send_file, render_template
 
-from furiganalyse.__main__ import main
+from furiganalyse.__main__ import main, SUPPORTED_INPUT_EXTS
 from furiganalyse.params import OutputFormat
 
 UPLOAD_FOLDER = '/tmp/furiganalysed_uploads/'
@@ -24,14 +25,14 @@ Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
 @app.route("/", methods=['GET'])
 def get_root():
-    return render_template('upload.html')
+    return render_upload()
 
 
 # Upload API
 @app.route('/upload-file', methods=['GET', 'POST'])
 def get_post_upload_file():
     if request.method == 'GET':
-        return render_template('upload.html')
+        return render_upload()
 
     # check if the post request has the file part
     if 'file' not in request.files:
@@ -93,6 +94,8 @@ def get_files(path_hash):
 
 OUTPUT_FORMAT_TO_EXTENSION = {
     OutputFormat.epub: ".epub",
+    OutputFormat.mobi: ".mobi",
+    OutputFormat.azw3: ".azw3",
     OutputFormat.many_txt: ".zip",
     OutputFormat.single_txt: ".txt",
     OutputFormat.apkg: ".apkg",
@@ -145,6 +148,10 @@ def cleanup_output_folder():
         total_size -= size
         if total_size < size_threshold:
             break
+
+
+def render_upload():
+    return render_template('upload.html', supported_input_exts=','.join(SUPPORTED_INPUT_EXTS))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import zipfile
 from tempfile import TemporaryDirectory
 from typing import Optional
 
+import capybre
 import pypandoc
 import typer
 
@@ -14,6 +15,7 @@ from furiganalyse.txt_format import write_txt_archive, concat_txt_files
 
 logging.basicConfig(level=logging.INFO)
 
+SUPPORTED_INPUT_EXTS = {".epub", ".azw3", ".mobi"}
 
 def main(
     inputfile: str,
@@ -23,6 +25,17 @@ def main(
     writing_mode: Optional[WritingMode] = None,
 ):
     with TemporaryDirectory() as td:
+        filename, ext = os.path.splitext(os.path.basename(inputfile))
+        if ext != ".epub":
+            if ext in  SUPPORTED_INPUT_EXTS:
+                logging.info(f"Convert {ext.lstrip('.').upper()} to EPUB first ...")
+                tmpfilepath = os.path.join(td, "tmp.epub")
+                capybre.convert(inputfile, tmpfilepath, as_ext='epub', suppress_output=False)
+                inputfile = tmpfilepath
+            else:
+                raise Exception(f"Extension {ext} is not supported, input file format must be one of these: "
+                                f"{','.join(SUPPORTED_INPUT_EXTS)}")
+
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
         logging.info("Extracting the archive ...")
@@ -35,12 +48,16 @@ def main(
         logging.info("Creating the output file ...")
         if output_format == OutputFormat.epub:
             write_epub_archive(unzipped_input_fpath, outputfile)
+        elif output_format in {OutputFormat.mobi, OutputFormat.azw3}:
+            tmpfilepath = os.path.join(td, "tmp.epub")
+            write_epub_archive(unzipped_input_fpath, tmpfilepath)
+            capybre.convert(tmpfilepath, outputfile, as_ext=output_format.value, suppress_output=False)
         elif output_format == OutputFormat.many_txt:
             write_txt_archive(unzipped_input_fpath, outputfile)
         elif output_format == OutputFormat.single_txt:
             concat_txt_files(unzipped_input_fpath, outputfile)
         elif output_format == OutputFormat.apkg:
-            deck_name = os.path.splitext(os.path.basename(inputfile))[0]
+            deck_name = filename
             generate_anki_deck(unzipped_input_fpath, deck_name, outputfile)
         elif output_format == OutputFormat.html:
             tmpfilepath = os.path.join(td, "tmp.epub")

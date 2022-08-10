@@ -9,6 +9,8 @@ class FuriganaMode(str, Enum):
 
 class OutputFormat(str, Enum):
     epub = "epub"
+    mobi = "mobi"
+    azw3 = "azw3"
     many_txt = "many_txt"
     single_txt = "single_txt"
     apkg = "apkg"

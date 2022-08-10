@@ -32,9 +32,9 @@ RUN rm -rf mecab-ipadic-neologd
 # Setup MeCab to use mecab-ipadic-neologd dict by default
 RUN sed -i "s'^dicdir.*'dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd'g" /usr/local/etc/mecabrc
 
-# Need pandoc for EPUB to HTML conversion
+# Need pandoc for EPUB to HTML conversion, and Calibre for other ebook formats
 RUN apt-get update && apt-get install -y \
-  pandoc \
+  pandoc calibre \
   && rm -rf /var/lib/apt/lists/*
 
 # Setup our dependencies
@@ -50,4 +50,4 @@ ADD furiganalyse furiganalyse
 
 EXPOSE 5000
 
-ENTRYPOINT ["gunicorn", "furiganalyse.app:app", "--worker-connections 1000", "--bind", "0.0.0.0:5000"]
+ENTRYPOINT ["gunicorn", "furiganalyse.app:app", "--worker-connections 1000", "--bind", "0.0.0.0:5000", "--timeout", "200"]

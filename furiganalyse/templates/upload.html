@@ -18,11 +18,14 @@
     <h1>Upload an ebook to furiganalyse</h1>
     <form action="/upload-file" method=post enctype=multipart/form-data onsubmit="return checkForm(this);">
       <p>
-         <input type=file name=file accept="application/epub+zip" multiple="false" oninput="fileSelected(this.form);"/>
+         <input type=file name=file accept="{{supported_input_exts}}" multiple="false" oninput="fileSelected(this.form);"/>
          <div>
-           <input type="radio" name="furigana_mode" id="fm_add" value="add" checked>Add furiganas<br>
-           <input type="radio" name="furigana_mode" id="fm_replace" value="replace">Add and override furiganas<br>
-           <input type="radio" name="furigana_mode" id="fm_remove" value="remove">Remove furiganas<br>
+           <input type="radio" name="furigana_mode" id="fm_add" value="add" checked>
+             Add furiganas (次の<ruby>駅<rt>ステーション</rt></ruby> -> <ruby>次<rt>つぎ</rt></ruby>の<ruby>駅<rt>ステーション</rt></ruby>)<br>
+           <input type="radio" name="furigana_mode" id="fm_replace" value="replace">
+             Add and override furiganas (次の<ruby>駅<rt>ステーション</rt></ruby> -> <ruby>次<rt>つぎ</rt></ruby>の<ruby>駅<rt>えき</rt></ruby>)<br>
+           <input type="radio" name="furigana_mode" id="fm_remove" value="remove">
+             Remove furiganas (次の<ruby>駅<rt>ステーション</rt></ruby> -> 次の駅)<br>
          </div><br>
         Writing mode:
         <div>
@@ -32,6 +35,8 @@
          </div><br>
          Output format: <div>
            <input type="radio" name="of" id="of_epub" value="epub" checked>EPUB<br>
+           <input type="radio" name="of" id="of_azw3" value="azw3">AZW3<br>
+           <input type="radio" name="of" id="of_mobi" value="mobi">MOBI<br>
            <input type="radio" name="of" id="of_many_txt" value="many_txt">Many text files (one per book part)<br>
            <input type="radio" name="of" id="of_single_txt" value="single_txt">Single text file<br>
            <input type="radio" name="of" id="of_apkg" value="apkg">Anki Deck (each sentence as a card)<br>
