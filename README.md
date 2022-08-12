@@ -8,9 +8,23 @@
 Furiganalyse
 =============
 
-Annotate Japanese ebooks (EPUB format) with furigana.
+Annotate Japanese ebooks with furigana, and other conversions.
 
 Try it <a href="http://furiganalyse.itsupera.co/">here</a> !
+
+Supported input formats:
+- EPUB
+- AZW3 (without DRM)
+- MOBI
+
+Supported output formats:
+- EPUB
+- AZW3 (without DRM)
+- MOBI
+- Many text files (one per book part)
+- Single text file
+- Anki Deck (each sentence as a card)
+- HTML (readable in web browser)
 
 Setup and run
 --------------
@@ -18,6 +32,11 @@ Setup and run
 Using Docker to install all the dependencies and dictionaries (tested on Ubuntu 20.04):
 ```bash
 docker build -t furiganalyse .
+```
+Or grab the latest prebuilt image:
+```bash
+docker pull itsupera/furiganalyse:latest
+docker tag itsupera/furiganalyse:latest furiganalyse:latest
 ```
 
 Run as a web app:
@@ -29,5 +48,6 @@ Then open http://127.0.0.1:5000 in your web browser
 Alternatively, can run it as a command line program:
 ```bash
 # Run this from the directory your ebook (for example "book.epub") is in
-docker run -v $PWD:/workspace --entrypoint=python3 furiganalyse -m furiganalyse /workspace/book.epub /workspace/book_with_furigana.epub
+docker run -v $PWD:/workspace --entrypoint=python3 furiganalyse:latest \
+    -m furiganalyse /workspace/book.epub /workspace/book_with_furigana.epub
 ```
