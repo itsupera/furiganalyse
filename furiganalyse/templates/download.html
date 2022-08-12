@@ -1,18 +1,62 @@
 <!doctype html>
-  <title>Download converted ebook file</title>
-  <h1>Download converted ebook file</h1>
+  <head>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+            var polling_interval_ms = 2000;
+
+            function fetchdata(){
+                $.ajax({
+                    url: '/jobs/{{ uid }}/status',
+                    type: 'get',
+                    success: function(data) {
+                        if(data.status === "complete") {
+                            $("h1").html("🎉 Conversion done!");
+                            $("#wait").hide();
+                            $("#result").show();
+                        } else if(data.status === "error") {
+                            $("h1").html("💣 Oops, something went wrong!");
+                            $("#wait").hide();
+                            $("#error").show();
+                        } else {
+                            setTimeout(fetchdata, polling_interval_ms);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        var errorMessage = xhr.status + ': ' + xhr.statusText
+                        alert('Error!! ' + errorMessage);
+                    }
+                });
+            }
+
+            $(document).ready(function(){
+                setTimeout(fetchdata, polling_interval_ms);
+            });
+        </script>
+</head>
+  <title>Furiganalyse</title>
+  <h1>Converting your ebook</h1>
   <body class="body">
-     <div class="container" align="left">
-         <a href="/files/{{value}}" target="blank"><button class='btn btn-default'>Download</button></a>
+     <div id="wait">
+         <img height="100px" src="/assets/spinner.gif">Please wait while your file is processed...</img>
+     </div>
+     <div class="container" id="result" align="left" hidden>
+         <a href='/jobs/{{ uid }}/file' target='blank'><button class='btn btn-default'>Download</button></a>
+         <a href="/" target="blank"><button class='btn btn-default'>Go back</button></a>
+         <p>
+             Thank you for using furiganalyse !
+         </p>
+         <p>
+             Please consider <a href="https://www.buymeacoffee.com/itsupera">donating</a> to help me pay for server costs.
+         </p>
+         <p>
+             Something if not right? Please report any issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
+         </p>
+     </div>
+     <div class="container" id="error" align="left" hidden>
+         <p>Sorry, your file could not be converted :(</p>
+         <p>
+             Please report the issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
+         </p>
          <a href="/" target="blank"><button class='btn btn-default'>Go back</button></a>
      </div>
-     <p>
-         Thank you for using furiganalyse !
-     </p>
-     <p>
-         Something went wrong ? Please report any issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
-     </p>
-     <p>
-         Also please consider <a href="https://www.buymeacoffee.com/itsupera">donating</a> to help me pay for server costs.
-     </p>
   </body>

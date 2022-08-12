@@ -1,95 +1,145 @@
+import asyncio
 import base64
 import logging
 import os
 import random
 import shutil
 import string
-import time
 import traceback
+from concurrent.futures.process import ProcessPoolExecutor
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from typing import Dict
+from uuid import UUID, uuid4
 
-from flask import Flask, request, redirect, send_file, render_template
+from fastapi import BackgroundTasks, Form, FastAPI, Request, status, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 
 from furiganalyse.__main__ import main, SUPPORTED_INPUT_EXTS
-from furiganalyse.params import OutputFormat
+from furiganalyse.params import OutputFormat, FuriganaMode, WritingMode
 
-UPLOAD_FOLDER = '/tmp/furiganalysed_uploads/'
-OUTPUT_FOLDER = '/tmp/furiganalysed_downloads/'
-app = Flask(__name__, template_folder='./templates')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
-Path(UPLOAD_FOLDER).mkdir(exist_ok=True)
+
+class Job(BaseModel):
+    uid: UUID = Field(default_factory=uuid4)
+    status: str = "in_progress"
+    result: str = None
+
+
+jobs: Dict[UUID, Job] = {}
+
+
+templates = Jinja2Templates(directory="./furiganalyse/templates")
+app = FastAPI()
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
+
+OUTPUT_FOLDER = '/tmp/furiganalysed/'
 Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
 
-@app.route("/", methods=['GET'])
-def get_root():
-    return render_upload()
+@app.get("/", response_class=HTMLResponse)
+def get_root(request: Request):
+    return templates.TemplateResponse("upload.html", {"request": request, "supported_input_exts": SUPPORTED_INPUT_EXTS})
 
 
-# Upload API
-@app.route('/upload-file', methods=['GET', 'POST'])
-def get_post_upload_file():
-    if request.method == 'GET':
-        return render_upload()
+@app.post("/submit")
+async def task_handler(
+    background_tasks: BackgroundTasks,
+    file: UploadFile,
+    furigana_mode: str = Form(),
+    writing_mode: str = Form(),
+    of: str = Form(),
+):
+    new_task = Job()
+    jobs[new_task.uid] = new_task
 
-    # check if the post request has the file part
-    if 'file' not in request.files:
-        return redirect(request.url)
-    file = request.files['file']
-
-    # if user does not select file, browser also
-    # submit a empty part without filename
-    if file.filename == '':
-        return redirect(request.url)
-
-    output_format = OutputFormat(request.form["of"])
-
-    filename = file.filename
-    output_filepath = filename_to_output_filepath(filename, output_format)
-    path_hash = encode_filepath(output_filepath)
-
+    # Free up some space if necessary
     cleanup_output_folder()
 
-    with TemporaryDirectory(dir=app.config['UPLOAD_FOLDER']) as td:
-        tmpfile = os.path.join(td, filename)
-        file.save(tmpfile)
-        try:
-            main(
-                tmpfile,
-                output_filepath,
-                furigana_mode=request.form['furigana_mode'],
-                output_format=output_format,
-                writing_mode=request.form['writing_mode'],
-            )
-        except Exception:
-            logging.error(f"Error while processing {tmpfile}: {traceback.format_exc()}")
-            return redirect('/error-file/' + filename)
+    # Write uploaded file to a temporary file
+    task_folder = os.path.join(OUTPUT_FOLDER, str(new_task.uid))
+    Path(task_folder).mkdir(exist_ok=True)
+    tmpfile = os.path.join(task_folder, file.filename)
+    contents = file.file.read()
+    with open(tmpfile, 'wb') as f:
+        f.write(contents)
 
-    # send file name as parameter to downlad
-    return redirect('/download-file/' + path_hash)
+    background_tasks.add_task(
+        start_furiganalyse_task, new_task.uid, task_folder, file.filename, of, furigana_mode, writing_mode
+    )
+
+    return RedirectResponse(f"/jobs/{new_task.uid}", status_code=status.HTTP_302_FOUND)
 
 
-@app.route("/error-file/<filename>", methods=['GET'])
-def get_error_file(filename):
-    return render_template('error.html', value=filename)
+@app.get("/jobs/{uid}", response_class=HTMLResponse)
+def get_download(request: Request, uid: UUID):
+    return templates.TemplateResponse("download.html", {"request": request, "uid": uid})
 
 
-# Download API
-@app.route("/download-file/<path_hash>", methods=['GET'])
-def get_download_file(path_hash):
-    return render_template('download.html', value=path_hash)
+def furiganalyse_task(
+    task_folder: Path,
+    filename: str,
+    output_format: str,
+    furigana_mode: str,
+    writing_mode: str
+) -> str:
+    input_filepath = os.path.join(task_folder, filename)
+    output_filename = generate_output_filename(filename, output_format)
+    output_filepath = os.path.join(task_folder, output_filename)
+    path_hash = encode_filepath(output_filepath)
+
+    try:
+        main(
+            input_filepath,
+            output_filepath,
+            furigana_mode=FuriganaMode(furigana_mode),
+            output_format=OutputFormat(output_format),
+            writing_mode=WritingMode(writing_mode),
+        )
+    except Exception:
+        logging.error(f"Error while processing {input_filepath}: {traceback.format_exc()}")
+        raise
+
+    return path_hash
 
 
-@app.route('/files/<path_hash>')
-def get_files(path_hash):
+@app.get("/jobs/{uid}/status")
+async def status_handler(uid: UUID):
+    job = jobs.get(uid)
+    if not job:
+        return Response("Uid not found!", status_code=404)
+    return jobs[uid]
+
+
+@app.get('/jobs/{uid}/file')
+def get_file(uid: UUID):
+    print(jobs)
+
+    job = jobs.get(uid)
+    if not job:
+        return Response("Uid not found!", status_code=404)
+
+    if job.status != "complete":
+        return Response("Job not completed yet!", status_code=400)
+
+    if not job.result:
+        return Response("Something went wrong!", status_code=500)
+
+    path_hash = job.result
     file_path = decode_filepath(path_hash)
-    if not file_path.startswith(app.config['OUTPUT_FOLDER']):
-        return render_template('error.html', value=os.path.basename(file_path))
+    filename = os.path.basename(file_path)
+    return FileResponse(path=file_path, filename=filename)
 
-    attachment_filename = "furiganalysed_" + os.path.basename(file_path)
-    return send_file(file_path, as_attachment=True, attachment_filename=attachment_filename)
+
+@app.on_event("startup")
+async def startup_event():
+    app.state.executor = ProcessPoolExecutor()
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    app.state.executor.shutdown()
 
 
 OUTPUT_FORMAT_TO_EXTENSION = {
@@ -103,14 +153,11 @@ OUTPUT_FORMAT_TO_EXTENSION = {
 }
 
 
-def filename_to_output_filepath(filename: str, output_format: OutputFormat) -> str:
-    filename_without_ext = os.path.splitext(filename)[0]
+def generate_output_filename(input_filename: str, output_format: OutputFormat) -> str:
+    filename_without_ext = os.path.splitext(input_filename)[0]
     extension = OUTPUT_FORMAT_TO_EXTENSION[output_format]
-    output_filename = filename_without_ext + extension
-    output_filepath = os.path.join(app.config['OUTPUT_FOLDER'], generate_random_key(12), output_filename)
-    Path(output_filepath).parent.mkdir(parents=True)
-    return output_filepath
-
+    output_filename = "furiganalysed_" + filename_without_ext + extension
+    return output_filename
 
 def generate_random_key(length):
     return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(length))
@@ -124,13 +171,13 @@ def decode_filepath(hashed_path):
     return str(base64.urlsafe_b64decode(hashed_path.encode("utf-8")), "utf-8")
 
 
-def cleanup_output_folder():
+def cleanup_output_folder(force: bool = False):
     """
     Keep the total size of output folder below a threshold, thrashing from the older files when needed.
     """
     size_threshold = int(100e6)  # 100MB
 
-    output_folder = Path(app.config['OUTPUT_FOLDER'])
+    output_folder = Path(OUTPUT_FOLDER)
     paths = sorted(output_folder.iterdir(), key=os.path.getctime)
 
     path_and_sizes = []
@@ -140,19 +187,32 @@ def cleanup_output_folder():
         path_and_sizes.append((path, size))
         total_size += size
 
-    if total_size < size_threshold:
+    if total_size < size_threshold and not force:
         return
+
     for path, size in path_and_sizes:
         logging.info(f"Removing {path} to free up space")
+
+        uid = UUID(os.path.basename(path))
+        if uid in jobs:
+            logging.info(f"Deleting associated job {uid}")
+            del jobs[uid]
+
         shutil.rmtree(path)
         total_size -= size
-        if total_size < size_threshold:
+        if total_size < size_threshold and not force:
             break
 
 
-def render_upload():
-    return render_template('upload.html', supported_input_exts=','.join(SUPPORTED_INPUT_EXTS))
+async def run_in_process(fn, *args):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(app.state.executor, fn, *args)  # wait and return result
 
 
-if __name__ == "__main__":
-    app.run(host='0.0.0.0')
+async def start_furiganalyse_task(uid: UUID, *args) -> None:
+    try:
+        jobs[uid].result = await run_in_process(furiganalyse_task, *args)
+        jobs[uid].status = "complete"
+    except:
+        logging.error(f"Error occured for job {uid}")
+        jobs[uid].status = "error"

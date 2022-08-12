@@ -47,7 +47,8 @@ RUN pip3 install -e .
 
 # Add the sources
 ADD furiganalyse furiganalyse
+ADD assets assets
 
 EXPOSE 5000
 
-ENTRYPOINT ["gunicorn", "furiganalyse.app:app", "--worker-connections 1000", "--bind", "0.0.0.0:5000", "--timeout", "200"]
+ENTRYPOINT ["uvicorn", "furiganalyse.app:app", "--workers", "10", "--host", "0.0.0.0", "--port", "5000"]

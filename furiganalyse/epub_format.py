@@ -26,7 +26,7 @@ def process_epub_file(unzipped_input_fpath, mode, writing_mode, output_format):
 
 
 def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
-    for css_filepath in Path(unzipped_input_fpath).glob('css'):
+    for css_filepath in Path(unzipped_input_fpath).glob('**/*.css'):
         with open(css_filepath) as fd:
             css_content = fd.read()
 

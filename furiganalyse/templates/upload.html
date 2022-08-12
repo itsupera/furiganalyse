@@ -1,22 +1,17 @@
 <!doctype html>
-    <script type="text/javascript">
-        function checkForm(form)
-        {
-            form.upload.disabled = true;
-            form.upload.value = "Please wait...";
-            return true;
-        }
-
-        function fileSelected(form)
-        {
-            form.upload.disabled = false;
-            form.upload.value = "Upload";
-        }
-    </script>
-
-    <title>Upload an ebook to furiganalyse</title>
+    <head>
+        <title>Upload an ebook to furiganalyse</title>
+        <script type="text/javascript">
+            function fileSelected(form)
+            {
+                form.upload.disabled = false;
+                form.upload.value = "Upload";
+            }
+        </script>
+    </head>
+    <body>
     <h1>Upload an ebook to furiganalyse</h1>
-    <form action="/upload-file" method=post enctype=multipart/form-data onsubmit="return checkForm(this);">
+    <form action="/submit" method="post" enctype=multipart/form-data>
       <p>
          <input type=file name=file accept="{{supported_input_exts}}" multiple="false" oninput="fileSelected(this.form);"/>
          <div>
@@ -42,7 +37,7 @@
            <input type="radio" name="of" id="of_apkg" value="apkg">Anki Deck (each sentence as a card)<br>
            <input type="radio" name="of" id="of_html" value="html">HTML (readable in web browser)<br>
          </div><br>
-         <input type=submit name="upload" value=Upload disabled/>
+        <input type=submit id="upload" name="upload" value=Upload disabled/>
     </form>
     <div>
         <p>
@@ -56,3 +51,4 @@
             Source code available on <a href="https://github.com/itsupera/furiganalyse">project page</a>
         </p>
     </div>
+    </body>

@@ -22,7 +22,7 @@ docker build -t furiganalyse .
 
 Run as a web app:
 ```bash
-docker run -p 127.0.0.1:5000:5000 furiganalyse
+docker run -p 127.0.0.1:5000:5000 furiganalyse:latest
 ```
 Then open http://127.0.0.1:5000 in your web browser
 
