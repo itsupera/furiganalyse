@@ -1,62 +1,78 @@
 <!doctype html>
-  <head>
+<head>
+    <title>Furiganalyse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
-            var polling_interval_ms = 2000;
+        var polling_interval_ms = 2000;
 
-            function fetchdata(){
-                $.ajax({
-                    url: '/jobs/{{ uid }}/status',
-                    type: 'get',
-                    success: function(data) {
-                        if(data.status === "complete") {
-                            $("h1").html("🎉 Conversion done!");
-                            $("#wait").hide();
-                            $("#result").show();
-                        } else if(data.status === "error") {
-                            $("h1").html("💣 Oops, something went wrong!");
-                            $("#wait").hide();
-                            $("#error").show();
-                        } else {
-                            setTimeout(fetchdata, polling_interval_ms);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        var errorMessage = xhr.status + ': ' + xhr.statusText
-                        alert('Error!! ' + errorMessage);
+        function fetchdata(){
+            $.ajax({
+                url: '/jobs/{{ uid }}/status',
+                type: 'get',
+                success: function(data) {
+                    if(data.status === "complete") {
+                        $("h1").html("🎉 Conversion done!");
+                        $("#wait").removeClass('visible').addClass('invisible');
+                        $("#result").removeClass('invisible').addClass('visible');
+                    } else if(data.status === "error") {
+                        $("h1").html("💣 Oops, something went wrong!");
+                        $("#wait").removeClass('visible').addClass('invisible');
+                        $("#error").removeClass('invisible').addClass('visible');
+                    } else {
+                        setTimeout(fetchdata, polling_interval_ms);
                     }
-                });
-            }
-
-            $(document).ready(function(){
-                setTimeout(fetchdata, polling_interval_ms);
+                },
+                error: function(xhr, status, error) {
+                    var errorMessage = xhr.status + ': ' + xhr.statusText
+                    console.log('[Error] ' + errorMessage);
+                    $("h1").html("💣 Oops, something went wrong!");
+                    $("#wait").removeClass('visible').addClass('invisible');
+                    $("#error").removeClass('invisible').addClass('visible');
+                }
             });
-        </script>
+        }
+
+        $(document).ready(function(){
+            setTimeout(fetchdata, polling_interval_ms);
+        });
+    </script>
+    <link href="{{ url_for('assets', path='styles.css') }}" rel="stylesheet">
 </head>
-  <title>Furiganalyse</title>
-  <h1>Converting your ebook</h1>
-  <body class="body">
-     <div id="wait">
-         <img height="100px" src="/assets/spinner.gif">Please wait while your file is processed...</img>
-     </div>
-     <div class="container" id="result" align="left" hidden>
-         <a href='/jobs/{{ uid }}/file' target='blank'><button class='btn btn-default'>Download</button></a>
-         <a href="/" target="blank"><button class='btn btn-default'>Go back</button></a>
-         <p>
-             Thank you for using furiganalyse !
-         </p>
-         <p>
-             Please consider <a href="https://www.buymeacoffee.com/itsupera">donating</a> to help me pay for server costs.
-         </p>
-         <p>
-             Something if not right? Please report any issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
-         </p>
-     </div>
-     <div class="container" id="error" align="left" hidden>
-         <p>Sorry, your file could not be converted :(</p>
-         <p>
-             Please report the issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
-         </p>
-         <a href="/" target="blank"><button class='btn btn-default'>Go back</button></a>
-     </div>
-  </body>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-A3rJD856KowSb7dwlZdYEkO39Gagi7vIsF0jrRAoQmDKKtQBHUuLZ9AsSv4jD4Xa" crossorigin="anonymous"></script>
+<div class="py-3">
+    <h1>Converting your ebook...</h1>
+</div>
+<div id="wait" class="text-center">
+    <div class="spinner-border" role="status"/>
+</div>
+<div class="invisible" id="result">
+    <div class="mb-3">
+        <a href='/jobs/{{ uid }}/file' target='blank'><button class='btn btn-primary'>Download</button></a>
+        <a href="/" target="blank"><button class='btn'>Go back</button></a>
+    </div>
+    <div>
+        <p>
+            Thank you for using furiganalyse !
+        </p>
+        <p>
+            Please consider <a href="https://www.buymeacoffee.com/itsupera">donating</a> to help me pay for server costs.
+        </p>
+        <p>
+            Something if not right? Please report any issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>.
+        </p>
+    </div>
+</div>
+<div class="invisible" id="error">
+    <div class="mb-3">
+        <p>Sorry, your file could not be converted 😓</p>
+        <p>
+            Please report the issue <a href="https://github.com/itsupera/furiganalyse/issues">here</a>,
+            or send me an email (itsupera@gmail.com).
+        </p>
+    </div>
+    <a href="/" target="blank"><button class='btn btn-secondary'>Go back</button></a>
+</div>
+</body>
