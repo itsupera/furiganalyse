@@ -10,7 +10,9 @@ Furiganalyse
 
 Annotate Japanese ebooks with furigana, and other conversions.
 
-Try it <a href="http://furiganalyse.itsupera.co/">here</a> !
+<a href="http://furiganalyse.itsupera.co/"><b>→ Try it here!</b></a>
+
+---
 
 Supported input formats:
 - EPUB
@@ -39,13 +41,13 @@ docker pull itsupera/furiganalyse:latest
 docker tag itsupera/furiganalyse:latest furiganalyse:latest
 ```
 
-Run as a web app:
+### Run as a web app
 ```bash
 docker run -p 127.0.0.1:5000:5000 furiganalyse:latest
 ```
 Then open http://127.0.0.1:5000 in your web browser
 
-Alternatively, can run it as a command line program:
+### Run as a CLI
 ```bash
 # Run this from the directory your ebook (for example "book.epub") is in
 docker run -v $PWD:/workspace --entrypoint=python3 furiganalyse:latest \
