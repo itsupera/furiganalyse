@@ -114,8 +114,6 @@ async def status_handler(uid: UUID):
 
 @app.get('/jobs/{uid}/file')
 def get_file(uid: UUID):
-    print(jobs)
-
     job = jobs.get(uid)
     if not job:
         return Response("Uid not found!", status_code=404)
