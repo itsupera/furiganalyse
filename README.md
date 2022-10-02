@@ -12,6 +12,8 @@ Annotate Japanese ebooks with furigana, and other conversions.
 
 <a href="http://furiganalyse.itsupera.co/"><b>→ Try it here!</b></a>
 
+![](assets/furiganalyse.jpg)
+
 ---
 
 Supported input formats:
