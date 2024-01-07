@@ -55,3 +55,29 @@ Then open http://127.0.0.1:5000 in your web browser
 docker run -v $PWD:/workspace --entrypoint=python3 furiganalyse:latest \
     -m furiganalyse /workspace/book.epub /workspace/book_with_furigana.epub
 ```
+
+### Calling the API
+```bash
+# Submit a job
+curl -v -XPOST http://127.0.0.1/submit \
+    -F "file=@<path-to-your-epub>" \
+    -F furigana_mode="add" \
+    -F writing_mode="horizontal-tb" \
+    -F of="epub" \
+    -F redirect=false
+
+# Response will look like this:
+# {"uid":"<job-id>"}
+
+# Check the status of the job
+curl -v http://127.0.0.1/jobs/<job-id>/status
+# Response will look like this:
+# {
+#   "uid": "<job-id>",
+#   "status": "complete",
+#   "result": "(...data...)"
+# }
+
+# Download the result
+curl http://127.0.0.1/jobs/<job-id>/file -o output.epub
+```

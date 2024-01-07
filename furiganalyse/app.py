@@ -50,6 +50,7 @@ async def task_handler(
     furigana_mode: str = Form(),
     writing_mode: str = Form(),
     of: str = Form(),
+    redirect: bool = Form(default=True),
 ):
     new_task = Job()
     jobs[new_task.uid] = new_task
@@ -69,7 +70,10 @@ async def task_handler(
         start_furiganalyse_task, new_task.uid, task_folder, file.filename, of, furigana_mode, writing_mode
     )
 
-    return RedirectResponse(f"/jobs/{new_task.uid}", status_code=status.HTTP_302_FOUND)
+    if redirect:
+        return RedirectResponse(f"/jobs/{new_task.uid}", status_code=status.HTTP_302_FOUND)
+    else:
+        return {"uid": new_task.uid}
 
 
 @app.get("/jobs/{uid}", response_class=HTMLResponse)
