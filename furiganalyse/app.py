@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
+from starlette.middleware.cors import CORSMiddleware
 
 from furiganalyse.__main__ import main, SUPPORTED_INPUT_EXTS
 from furiganalyse.params import OutputFormat, FuriganaMode, WritingMode
@@ -32,6 +33,13 @@ jobs: Dict[UUID, Job] = {}
 
 templates = Jinja2Templates(directory="./furiganalyse/templates")
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[""],
+    allow_credentials=True,
+    allow_methods=[""],
+    allow_headers=["*"],
+)
 app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 OUTPUT_FOLDER = '/tmp/furiganalysed/'
