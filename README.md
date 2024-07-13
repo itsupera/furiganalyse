@@ -33,9 +33,9 @@ Supported output formats:
 Setup and run
 --------------
 
-Using Docker to install all the dependencies and dictionaries (tested on Ubuntu 20.04):
+Using Docker to create a container with all the dependencies and dictionaries (tested on Ubuntu 24.04):
 ```bash
-docker build -t furiganalyse .
+docker compose build
 ```
 Or grab the latest prebuilt image:
 ```bash
@@ -45,7 +45,7 @@ docker tag itsupera/furiganalyse:latest furiganalyse:latest
 
 ### Run as a web app
 ```bash
-docker run -p 127.0.0.1:5000:5000 furiganalyse:latest
+docker compose up -d
 ```
 Then open http://127.0.0.1:5000 in your web browser
 
@@ -80,4 +80,12 @@ curl -v http://127.0.0.1/jobs/<job-id>/status
 
 # Download the result
 curl http://127.0.0.1/jobs/<job-id>/file -o output.epub
+```
+
+Local development setup
+------------------------
+
+Install python and poetry, (optionally) create a virtual environment, and install the dependencies:
+```bash
+poetry install
 ```

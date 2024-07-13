@@ -1,11 +1,11 @@
-FROM python:3.8-buster
-MAINTAINER Itsupera <itsupera@gmail.com>
+FROM python:3.12-bookworm
+LABEL org.opencontainers.image.authors="itsupera@gmail.com"
 
 # switch to root user to use apt-get
 USER root
 
 RUN apt-get update && apt-get install -y \
-  git curl file \
+  git curl file python3-poetry \
   && rm -rf /var/lib/apt/lists/*
 
 # Install MeCab and Cabocha for extracting phonemes from sentence transcripts
@@ -39,10 +39,11 @@ RUN apt-get update && apt-get install -y \
 
 # Setup our dependencies
 WORKDIR /workdir
-ADD setup.py .
-ADD setup.cfg .
+ADD README.md .
+ADD pyproject.toml .
+ADD poetry.lock .
 # Little optimization in order to install our dependencies before copying the source
-RUN mkdir furiganalyse
+RUN mkdir furiganalyse && touch furiganalyse/__init__.py
 RUN pip3 install -e .
 
 # Add the sources

@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "furiganalyse"
+version = "0.7.6"
+description = "Annotate Japanese ebooks with furigana"
+authors = ["Itsupera <itsupera@gmail.com>"]
+license = "MIT license"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+typer = "^0.3.2"
+fastapi = "^0.79.0"
+uvicorn = "^0.18.2"
+python-multipart = "^0.0.5"
+Jinja2 = "^3.1.2"
+furigana = { git = "https://github.com/itsupera/furigana.git", tag = "0.4" }
+genanki = { git = "https://github.com/kerrickstaley/genanki", tag="v0.13.0" }
+pypandoc = "^1.6.4"
+capybre = "^0.0.6"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.1"
+pytest = "^8.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
