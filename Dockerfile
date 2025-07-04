@@ -4,38 +4,23 @@ LABEL org.opencontainers.image.authors="itsupera@gmail.com"
 # switch to root user to use apt-get
 USER root
 
+# Install mecab and mecab-ipadic from Debian packages
 RUN apt-get update && apt-get install -y \
   git curl file python3-poetry \
+  mecab=0.996-14+b14 mecab-ipadic=2.7.0-20070801+main-3 mecab-ipadic-utf8=2.7.0-20070801+main-3 libmecab-dev=0.996-14+b14 \
+  sudo \
+  pandoc calibre \
   && rm -rf /var/lib/apt/lists/*
-
-# Install MeCab and Cabocha for extracting phonemes from sentence transcripts
-# (Adapted from https://github.com/torao/ml-nlp/blob/master/ml-nlp-corpus/docker)
-
-# MeCab 0.996
-RUN curl -o mecab-0.996.tar.gz -L 'https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7cENtOXlicTFaRUE'
-RUN tar zxfv mecab-0.996.tar.gz
-RUN cd mecab-0.996; ./configure; make; make check; make install
-RUN ldconfig
-RUN rm -rf mecab-0.996 mecab-0.996.tar.gz
-
-# MeCab IPADIC
-RUN curl -o mecab-ipadic-2.7.0-20070801.tar.gz -L 'https://drive.google.com/uc?export=download&id=0B4y35FiV1wh7MWVlSDBCSXZMTXM'
-RUN tar zxf mecab-ipadic-2.7.0-20070801.tar.gz
-RUN cd mecab-ipadic-2.7.0-20070801 && ./configure --with-charset=utf8 && make && make install
-RUN rm -rf mecab-ipadic-2.7.0-20070801 mecab-ipadic-2.7.0-20070801.tar.gz
 
 # NEologd
 RUN git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git
 RUN cd mecab-ipadic-neologd && ./bin/install-mecab-ipadic-neologd -n -a -y
 RUN rm -rf mecab-ipadic-neologd
 
+# Move config file from /etc/mecabrc (default install path on Debian) to what the program expects
 # Setup MeCab to use mecab-ipadic-neologd dict by default
-RUN sed -i "s'^dicdir.*'dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd'g" /usr/local/etc/mecabrc
-
-# Need pandoc for EPUB to HTML conversion, and Calibre for other ebook formats
-RUN apt-get update && apt-get install -y \
-  pandoc calibre \
-  && rm -rf /var/lib/apt/lists/*
+RUN cp /etc/mecabrc /usr/local/etc/mecabrc && \
+  sed -i "s'^dicdir.*'dicdir = /usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd'g" /usr/local/etc/mecabrc
 
 # Setup our dependencies
 WORKDIR /workdir
