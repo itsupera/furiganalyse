@@ -32,7 +32,10 @@ jobs: Dict[UUID, Job] = {}
 
 
 templates = Jinja2Templates(directory="./furiganalyse/templates")
-app = FastAPI()
+
+# Get the root path from environment variable, default to empty for local development
+root_path = os.getenv("ROOT_PATH", "")
+app = FastAPI(root_path=root_path)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[""],

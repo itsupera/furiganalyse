@@ -15,7 +15,7 @@ from furiganalyse.txt_format import write_txt_archive, concat_txt_files
 
 logging.basicConfig(level=logging.INFO)
 
-SUPPORTED_INPUT_EXTS = {".epub", ".azw3", ".mobi"}
+SUPPORTED_INPUT_EXTS = {".epub", ".azw3", ".mobi", ".txt", ".html"}
 
 def main(
     inputfile: str,
@@ -26,15 +26,7 @@ def main(
 ):
     with TemporaryDirectory() as td:
         filename, ext = os.path.splitext(os.path.basename(inputfile))
-        if ext != ".epub":
-            if ext in  SUPPORTED_INPUT_EXTS:
-                logging.info(f"Convert {ext.lstrip('.').upper()} to EPUB first ...")
-                tmpfilepath = os.path.join(td, "tmp.epub")
-                capybre.convert(inputfile, tmpfilepath, as_ext='epub', suppress_output=False)
-                inputfile = tmpfilepath
-            else:
-                raise Exception(f"Extension {ext} is not supported, input file format must be one of these: "
-                                f"{','.join(SUPPORTED_INPUT_EXTS)}")
+        inputfile = convert_inputfile_if_not_epub(inputfile, ext, td)
 
         unzipped_input_fpath = os.path.join(td, "unzipped")
 
@@ -65,6 +57,30 @@ def main(
             pypandoc.convert_file(tmpfilepath, 'html', outputfile=outputfile)
         else:
             raise ValueError("Invalid writing mode")
+
+
+def convert_inputfile_if_not_epub(inputfile, ext, td):
+    """
+    Convert the input file to EPUB if it's not already in that format
+    :param inputfile: file path to the input file
+    :param ext: extension of the input file (e.g. ".html")
+    :param td: temporary directory path to store the converted file
+    :return: path to the converted file, or the original file if it's already in EPUB format
+    """
+    if ext not in SUPPORTED_INPUT_EXTS:
+        raise Exception(f"Extension {ext} is not supported, input file format must be one of these: "
+                        f"{','.join(SUPPORTED_INPUT_EXTS)}")
+
+    if ext == ".epub":
+        return inputfile
+
+    logging.info(f"Convert {ext.lstrip('.').upper()} to EPUB first ...")
+    tmpfilepath = os.path.join(td, "tmp.epub")
+    if ext == ".html":
+        pypandoc.convert_file(inputfile, 'epub', outputfile=tmpfilepath)
+    else:
+        capybre.convert(inputfile, tmpfilepath, as_ext='epub', suppress_output=False)
+    return tmpfilepath
 
 
 if __name__ == '__main__':

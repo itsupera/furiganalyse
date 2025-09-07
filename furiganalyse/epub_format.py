@@ -36,6 +36,16 @@ def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
         with open(css_filepath, "w") as fd:
             fd.write(css_content)
 
+    # content.opf has a tag like this: <meta name="primary-writing-mode" content="vertical-rl"/>
+    # content_opf_path: Path = Path(unzipped_input_fpath) / "content.opf"
+    # if content_opf_path.exists():
+    #     from xml.etree import ElementTree as ET
+    #     tree = ET.parse(content_opf_path)
+    #     # import ipdb; ipdb.set_trace()
+    #     x: ET.Element = tree.find(".//{http://www.idpf.org/2007/opf}meta[@name='primary-writing-mode']")
+    #     x.attrib["content"] = writing_mode.value
+    #     tree.write(content_opf_path, encoding="utf-8")
+
 
 def write_epub_archive(unzipped_input_fpath: str, outputfile: str):
     """
