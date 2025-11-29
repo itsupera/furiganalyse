@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ebook files (test/sample data)
+*.epub
+*.mobi
+*.azw3
+*.apkg
+
+# Output files
+conv_*.html
+conv_*.txt
+
+# Sample data
+sample_data/
+
+# Ruff
+.ruff_cache/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+*.swp
+*.swo
+
+# AI agents
+.claude/
+.gemini/
+.junie/
+CLAUDE.md
+GEMINI.md
+AGENTS.md
