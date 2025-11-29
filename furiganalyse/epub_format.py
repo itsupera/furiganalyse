@@ -30,8 +30,8 @@ def update_writing_mode(unzipped_input_fpath: str, writing_mode: WritingMode):
         with open(css_filepath) as fd:
             css_content = fd.read()
 
-        pattern = re.compile(r"-webkit-writing-mode: [^;\n]+")
-        css_content = pattern.sub(f"-webkit-writing-mode: {writing_mode}", css_content)
+        pattern = re.compile(r"(-webkit-writing-mode|-epub-writing-mode|writing-mode):\s*[^;\n]+")
+        css_content = pattern.sub(rf"\1: {writing_mode.value}", css_content)
 
         with open(css_filepath, "w") as fd:
             fd.write(css_content)
