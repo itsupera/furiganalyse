@@ -3,9 +3,14 @@ import os
 import re
 import zipfile
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 from furiganalyse.params import OutputFormat, WritingMode
 from furiganalyse.parsing import process_html, convert_html_to_txt
+
+# Register XHTML namespace with empty prefix (default namespace)
+# This prevents ElementTree from adding 'html:' prefix to all elements when serializing
+ET.register_namespace('', 'http://www.w3.org/1999/xhtml')
 
 
 def process_epub_file(unzipped_input_fpath, mode, writing_mode, output_format):
