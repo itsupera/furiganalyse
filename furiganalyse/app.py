@@ -188,7 +188,7 @@ def cleanup_output_folder(force: bool = False):
     """
     Keep the total size of output folder below a threshold, thrashing from the older files when needed.
     """
-    size_threshold = int(100e6)  # 100MB
+    size_threshold = int(os.environ.get("FURIGANALYSE_CLEANUP_THRESHOLD_IN_MB", 100)) * 1_000_000
 
     output_folder = Path(OUTPUT_FOLDER)
     paths = sorted(output_folder.iterdir(), key=os.path.getctime)
