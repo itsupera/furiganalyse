@@ -1,17 +1,17 @@
 [tool.poetry]
 name = "furiganalyse"
-version = "0.7.8"
+version = "0.7.7"
 description = "Annotate Japanese ebooks with furigana"
 authors = ["Itsupera <itsupera@gmail.com>"]
 license = "MIT license"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 typer = "^0.20.1"
 fastapi = "^0.124.4"
 uvicorn = "^0.33.0"
-python-multipart = "^0.0.20"
+python-multipart = "^0.0.22"
 Jinja2 = "^3.1.6"
 furigana = { git = "https://github.com/itsupera/furigana.git", tag = "v0.5" }
 genanki = { git = "https://github.com/kerrickstaley/genanki", tag="v0.13.0" }
