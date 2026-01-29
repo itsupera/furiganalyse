@@ -10,6 +10,7 @@ import typer
 
 from furiganalyse.apkg_format import generate_anki_deck
 from furiganalyse.epub_format import process_epub_file, write_epub_archive
+from furiganalyse.known_words import load_word_list
 from furiganalyse.params import FuriganaMode, OutputFormat, WritingMode
 from furiganalyse.txt_format import write_txt_archive, concat_txt_files
 
@@ -23,7 +24,14 @@ def main(
     furigana_mode: FuriganaMode = FuriganaMode.add,
     output_format: OutputFormat = OutputFormat.epub,
     writing_mode: Optional[WritingMode] = None,
+    known_words_list: Optional[str] = None,
 ):
+    # Load the known words list if specified
+    exclude_words = None
+    if known_words_list:
+        logging.info("Loading known words list: %s", known_words_list)
+        exclude_words = load_word_list(known_words_list)
+
     with TemporaryDirectory() as td:
         filename, ext = os.path.splitext(os.path.basename(inputfile))
         inputfile = convert_inputfile_if_not_epub(inputfile, ext, td)
@@ -35,7 +43,9 @@ def main(
             zip_ref.extractall(unzipped_input_fpath)
 
         logging.info("Processing the files ...")
-        process_epub_file(unzipped_input_fpath, furigana_mode, writing_mode, output_format)
+        process_epub_file(
+            unzipped_input_fpath, furigana_mode, writing_mode, output_format, exclude_words
+        )
 
         logging.info("Creating the output file ...")
         if output_format == OutputFormat.epub:

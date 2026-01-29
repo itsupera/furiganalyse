@@ -3,6 +3,7 @@ import os
 import re
 import zipfile
 from pathlib import Path
+from typing import Optional, Set
 from xml.etree import ElementTree as ET
 
 from furiganalyse.params import OutputFormat, WritingMode
@@ -13,16 +14,22 @@ from furiganalyse.parsing import process_html, convert_html_to_txt
 ET.register_namespace('', 'http://www.w3.org/1999/xhtml')
 
 
-def process_epub_file(unzipped_input_fpath, mode, writing_mode, output_format):
+def process_epub_file(
+    unzipped_input_fpath,
+    mode,
+    writing_mode,
+    output_format,
+    exclude_words: Optional[Set[str]] = None,
+):
     if writing_mode is not None:
         update_writing_mode(unzipped_input_fpath, writing_mode)
 
     for root, _, files in os.walk(unzipped_input_fpath):
         for file in files:
             if os.path.splitext(file)[1] in {".html", ".xhtml"}:
-                logging.info(f"    Processing {file}")
+                logging.info("    Processing %s", file)
                 html_filepath = os.path.join(root, file)
-                tree = process_html(html_filepath, mode)
+                tree = process_html(html_filepath, mode, exclude_words)
                 if output_format in {OutputFormat.many_txt, OutputFormat.single_txt, OutputFormat.apkg}:
                     txt_outputfile = os.path.splitext(html_filepath)[0] + '.txt'
                     convert_html_to_txt(tree, txt_outputfile)

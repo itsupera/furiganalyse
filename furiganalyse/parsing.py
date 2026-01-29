@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Tuple, List, Iterable
+from typing import Tuple, List, Iterable, Optional, Set
 from xml.etree import ElementTree as ET
 
 from furigana.furigana import create_furigana_html
@@ -10,13 +10,17 @@ from furiganalyse.params import FuriganaMode
 NAMESPACE = "{http://www.w3.org/1999/xhtml}"
 
 
-def process_html(inputfile: str, mode: FuriganaMode) -> ET.ElementTree:
+def process_html(
+    inputfile: str, mode: FuriganaMode, exclude_words: Optional[Set[str]] = None
+) -> ET.ElementTree:
     tree = ET.parse(inputfile)
-    process_tree(tree, mode)
+    process_tree(tree, mode, exclude_words)
     return tree
 
 
-def process_tree(tree: ET.ElementTree, mode: FuriganaMode):
+def process_tree(
+    tree: ET.ElementTree, mode: FuriganaMode, exclude_words: Optional[Set[str]] = None
+):
     parent_map = dict((c, p) for p in tree.iter() for c in p)
 
     if mode in {"remove", "replace"}:
@@ -28,8 +32,8 @@ def process_tree(tree: ET.ElementTree, mode: FuriganaMode):
             # Exclude ruby related tags, we don't want to override them (unless we have removed them before)
             if not inside_ruby_subtag(p, parent_map):
                 logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
-                process_head(p)
-                process_tail(p, parent_map[p])
+                process_head(p, exclude_words)
+                process_tail(p, parent_map[p], exclude_words)
                 logging.debug(f">>> AFTER  {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
 
         # Add the namespace to our new elements
@@ -84,7 +88,7 @@ def remove_existing_furigana(tree: ET.ElementTree, parent_map: dict):
         parent_elem.remove(elem)
 
 
-def process_head(elem: ET.Element):
+def process_head(elem: ET.Element, exclude_words: Optional[Set[str]] = None):
     """
     Process the text that is before the children of the given element.
     """
@@ -94,7 +98,7 @@ def process_head(elem: ET.Element):
     text = elem.text.strip()
     if contains_kanji(text):
 
-        head, children, tail = create_parsed_furigana_html(text)
+        head, children, tail = create_parsed_furigana_html(text, exclude_words)
 
         # Replace the original text by the ruby childs "head"
         elem.text = head
@@ -104,7 +108,9 @@ def process_head(elem: ET.Element):
             elem.insert(0, child)
 
 
-def process_tail(elem: ET.Element, parent_elem: ET.Element):
+def process_tail(
+    elem: ET.Element, parent_elem: ET.Element, exclude_words: Optional[Set[str]] = None
+):
     """
     Process the text that is before the children of the given element.
     """
@@ -114,7 +120,7 @@ def process_tail(elem: ET.Element, parent_elem: ET.Element):
     text = elem.tail.strip()
     if contains_kanji(text):
 
-        head, children, tail = create_parsed_furigana_html(text)
+        head, children, tail = create_parsed_furigana_html(text, exclude_words)
 
         # Replace the original tail by the rubys "head"
         elem.tail = head
@@ -125,14 +131,16 @@ def process_tail(elem: ET.Element, parent_elem: ET.Element):
             parent_elem.insert(idx + 1, child)
 
 
-def create_parsed_furigana_html(text: str) -> Tuple[str, List[ET.Element], str]:
+def create_parsed_furigana_html(
+    text: str, exclude_words: Optional[Set[str]] = None
+) -> Tuple[str, List[ET.Element], str]:
     """
     Generate the furigana and return it parsed: "head" text, <ruby> children, "tail" text.
     """
     try:
-        new_text = create_furigana_html(text)
+        new_text = create_furigana_html(text, exclude_words=exclude_words)
     except Exception:
-        logging.warning(f"Something wrong happened when retrieving furigana for '{text}'")
+        logging.warning("Something wrong happened when retrieving furigana for '%s'", text)
         new_text = text
 
     # Need to wrap the children <ruby> elements in something to parse them
@@ -146,7 +154,7 @@ def create_parsed_furigana_html(text: str) -> Tuple[str, List[ET.Element], str]:
     return elem.text, list(elem), elem.tail
 
 
-kanji_pattern = re.compile(f"[一-龯]")
+kanji_pattern = re.compile("[一-龯]")
 
 
 def contains_kanji(text: str) -> bool:

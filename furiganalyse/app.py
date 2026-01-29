@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
 from furiganalyse.__main__ import main, SUPPORTED_INPUT_EXTS
+from furiganalyse.known_words import list_available_word_lists
 from furiganalyse.params import OutputFormat, FuriganaMode, WritingMode
 
 
@@ -51,7 +52,14 @@ Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
 @app.get("/", response_class=HTMLResponse)
 def get_root(request: Request):
-    return templates.TemplateResponse("upload.html", {"request": request, "supported_input_exts": SUPPORTED_INPUT_EXTS})
+    return templates.TemplateResponse(
+        "upload.html",
+        {
+            "request": request,
+            "supported_input_exts": SUPPORTED_INPUT_EXTS,
+            "known_words_lists": list_available_word_lists(),
+        },
+    )
 
 
 @app.post("/submit")
@@ -61,6 +69,7 @@ async def task_handler(
     furigana_mode: str = Form(),
     writing_mode: str = Form(),
     of: str = Form(),
+    known_words_list: str = Form(default=""),
     redirect: bool = Form(default=True),
 ):
     new_task = Job()
@@ -78,7 +87,14 @@ async def task_handler(
         f.write(contents)
 
     background_tasks.add_task(
-        start_furiganalyse_task, new_task.uid, task_folder, file.filename, of, furigana_mode, writing_mode
+        start_furiganalyse_task,
+        new_task.uid,
+        task_folder,
+        file.filename,
+        of,
+        furigana_mode,
+        writing_mode,
+        known_words_list,
     )
 
     if redirect:
@@ -97,7 +113,8 @@ def furiganalyse_task(
     filename: str,
     output_format: str,
     furigana_mode: str,
-    writing_mode: str
+    writing_mode: str,
+    known_words_list: str = "",
 ) -> str:
     input_filepath = os.path.join(task_folder, filename)
     output_filename = generate_output_filename(filename, output_format)
@@ -111,9 +128,10 @@ def furiganalyse_task(
             furigana_mode=FuriganaMode(furigana_mode),
             output_format=OutputFormat(output_format),
             writing_mode=WritingMode(writing_mode),
+            known_words_list=known_words_list if known_words_list else None,
         )
     except Exception:
-        logging.error(f"Error while processing {input_filepath}: {traceback.format_exc()}")
+        logging.error("Error while processing %s: %s", input_filepath, traceback.format_exc())
         raise
 
     return path_hash

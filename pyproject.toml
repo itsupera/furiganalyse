@@ -13,7 +13,7 @@ fastapi = "^0.79.0"
 uvicorn = "^0.18.2"
 python-multipart = "^0.0.5"
 Jinja2 = "^3.1.2"
-furigana = { git = "https://github.com/itsupera/furigana.git", tag = "0.4" }
+furigana = { git = "https://github.com/itsupera/furigana.git", tag = "v0.5" }
 genanki = { git = "https://github.com/kerrickstaley/genanki", tag="v0.13.0" }
 pypandoc = "^1.6.4"
 capybre = "^0.0.6"
