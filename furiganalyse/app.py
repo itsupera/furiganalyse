@@ -11,8 +11,8 @@ from pathlib import Path
 from typing import Dict
 from uuid import UUID, uuid4
 
-from fastapi import BackgroundTasks, Form, FastAPI, Request, status, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response
+from fastapi import BackgroundTasks, File, Form, FastAPI, Request, status, UploadFile
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
@@ -49,6 +49,28 @@ app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 OUTPUT_FOLDER = '/tmp/furiganalysed/'
 Path(OUTPUT_FOLDER).mkdir(exist_ok=True)
 
+# Maximum size for custom word list uploads (1MB)
+MAX_WORD_LIST_SIZE = 1 * 1024 * 1024
+
+
+def validate_word_list_file(contents: bytes) -> tuple[bool, str]:
+    """
+    Validate a custom word list file.
+
+    Returns:
+        A tuple of (is_valid, error_message).
+        If valid, error_message is empty.
+    """
+    if len(contents) > MAX_WORD_LIST_SIZE:
+        return False, f"Word list file too large. Maximum size is {MAX_WORD_LIST_SIZE // 1024}KB."
+
+    try:
+        contents.decode("utf-8")
+    except UnicodeDecodeError:
+        return False, "Word list file must be UTF-8 encoded text."
+
+    return True, ""
+
 
 @app.get("/", response_class=HTMLResponse)
 def get_root(request: Request):
@@ -70,6 +92,7 @@ async def task_handler(
     writing_mode: str = Form(),
     of: str = Form(),
     known_words_list: str = Form(default=""),
+    custom_word_list: UploadFile = File(default=None),
     redirect: bool = Form(default=True),
 ):
     new_task = Job()
@@ -86,6 +109,30 @@ async def task_handler(
     with open(tmpfile, 'wb') as f:
         f.write(contents)
 
+    # Handle custom word list upload
+    custom_word_list_path = None
+    if known_words_list == "__custom__":
+        # Clear the special marker value
+        known_words_list = ""
+        if custom_word_list and custom_word_list.filename:
+            word_list_contents = custom_word_list.file.read()
+            is_valid, error_message = validate_word_list_file(word_list_contents)
+            if not is_valid:
+                # Clean up task folder on validation error
+                shutil.rmtree(task_folder)
+                del jobs[new_task.uid]
+                if redirect:
+                    return JSONResponse(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        content={"error": error_message},
+                    )
+                else:
+                    return {"error": error_message}
+
+            custom_word_list_path = os.path.join(task_folder, "custom_word_list.txt")
+            with open(custom_word_list_path, 'wb') as f:
+                f.write(word_list_contents)
+
     background_tasks.add_task(
         start_furiganalyse_task,
         new_task.uid,
@@ -95,6 +142,7 @@ async def task_handler(
         furigana_mode,
         writing_mode,
         known_words_list,
+        custom_word_list_path,
     )
 
     if redirect:
@@ -115,6 +163,7 @@ def furiganalyse_task(
     furigana_mode: str,
     writing_mode: str,
     known_words_list: str = "",
+    custom_word_list_path: str = None,
 ) -> str:
     input_filepath = os.path.join(task_folder, filename)
     output_filename = generate_output_filename(filename, output_format)
@@ -129,6 +178,7 @@ def furiganalyse_task(
             output_format=OutputFormat(output_format),
             writing_mode=WritingMode(writing_mode),
             known_words_list=known_words_list if known_words_list else None,
+            custom_word_list_path=custom_word_list_path,
         )
     except Exception:
         logging.error("Error while processing %s: %s", input_filepath, traceback.format_exc())

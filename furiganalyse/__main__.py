@@ -10,7 +10,7 @@ import typer
 
 from furiganalyse.apkg_format import generate_anki_deck
 from furiganalyse.epub_format import process_epub_file, write_epub_archive
-from furiganalyse.known_words import load_word_list
+from furiganalyse.known_words import load_word_list, load_word_list_from_path
 from furiganalyse.params import FuriganaMode, OutputFormat, WritingMode
 from furiganalyse.txt_format import write_txt_archive, concat_txt_files
 
@@ -25,10 +25,14 @@ def main(
     output_format: OutputFormat = OutputFormat.epub,
     writing_mode: Optional[WritingMode] = None,
     known_words_list: Optional[str] = None,
+    custom_word_list_path: Optional[str] = None,
 ):
-    # Load the known words list if specified
+    # Load the known words list if specified (custom path takes precedence)
     exclude_words = None
-    if known_words_list:
+    if custom_word_list_path:
+        logging.info("Loading custom word list from: %s", custom_word_list_path)
+        exclude_words = load_word_list_from_path(custom_word_list_path)
+    elif known_words_list:
         logging.info("Loading known words list: %s", known_words_list)
         exclude_words = load_word_list(known_words_list)
 

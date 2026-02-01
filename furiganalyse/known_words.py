@@ -104,3 +104,32 @@ def load_word_list(name: str) -> Set[str]:
 
     logging.info("Loaded %d words from %s", len(words), name)
     return words
+
+
+def load_word_list_from_path(filepath: str) -> Set[str]:
+    """
+    Load a word list from an arbitrary file path (for user uploads).
+
+    Args:
+        filepath: The full path to the word list file.
+
+    Returns:
+        A set of words from the file.
+
+    Raises:
+        FileNotFoundError: If the word list file doesn't exist.
+    """
+    path = Path(filepath)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Word list not found: {filepath}")
+
+    words = set()
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            word = line.strip()
+            if word:
+                words.add(word)
+
+    logging.info("Loaded %d words from %s", len(words), filepath)
+    return words

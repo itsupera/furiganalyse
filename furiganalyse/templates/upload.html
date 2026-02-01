@@ -11,11 +11,30 @@
         function updateApplyToDropdown() {
             var removeSelected = document.getElementById('fm_remove').checked;
             var dropdown = document.getElementById('known_words_list');
+            var customWordListContainer = document.getElementById('custom_word_list_container');
+            var customWordListInput = document.getElementById('custom_word_list');
+
             if (removeSelected) {
                 dropdown.value = '';
                 dropdown.disabled = true;
+                customWordListContainer.style.display = 'none';
+                customWordListInput.value = '';
             } else {
                 dropdown.disabled = false;
+                updateCustomWordListVisibility();
+            }
+        }
+
+        function updateCustomWordListVisibility() {
+            var dropdown = document.getElementById('known_words_list');
+            var customWordListContainer = document.getElementById('custom_word_list_container');
+            var customWordListInput = document.getElementById('custom_word_list');
+
+            if (dropdown.value === '__custom__') {
+                customWordListContainer.style.display = 'block';
+            } else {
+                customWordListContainer.style.display = 'none';
+                customWordListInput.value = '';
             }
         }
 
@@ -23,6 +42,7 @@
             document.getElementById('fm_add').addEventListener('change', updateApplyToDropdown);
             document.getElementById('fm_replace').addEventListener('change', updateApplyToDropdown);
             document.getElementById('fm_remove').addEventListener('change', updateApplyToDropdown);
+            document.getElementById('known_words_list').addEventListener('change', updateCustomWordListVisibility);
             updateApplyToDropdown();
         });
     </script>
@@ -90,14 +110,21 @@
                     </div>
                 </li>
 
-                <li class="list-group-item container-sm hstack gap-3">
-                    <h3 class="text-nowrap">Apply to</h3>
-                    <select class="form-select container-sm" name="known_words_list" id="known_words_list" form="form">
-                        <option value="" selected>all words</option>
-                        {% for list_name, display_name, word_count in known_words_lists %}
-                        <option value="{{ list_name }}">words not in {{ display_name }} ({{ word_count }} words)</option>
-                        {% endfor %}
-                    </select>
+                <li class="list-group-item container-sm vstack gap-2">
+                    <div class="hstack gap-3">
+                        <h3 class="text-nowrap">Apply to</h3>
+                        <select class="form-select container-sm" name="known_words_list" id="known_words_list" form="form">
+                            <option value="" selected>all words</option>
+                            {% for list_name, display_name, word_count in known_words_lists %}
+                            <option value="{{ list_name }}">words not in {{ display_name }} ({{ word_count }} words)</option>
+                            {% endfor %}
+                            <option value="__custom__">words not in custom list (upload below)</option>
+                        </select>
+                    </div>
+                    <div id="custom_word_list_container" style="display: none;">
+                        <label for="custom_word_list" class="form-label">Upload custom word list (one word per line, UTF-8, max 1MB)</label>
+                        <input class="form-control" type="file" name="custom_word_list" id="custom_word_list" accept=".txt,.csv">
+                    </div>
                 </li>
 
                 <li class="list-group-item container-sm vstack gap-1">
