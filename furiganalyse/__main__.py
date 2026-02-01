@@ -26,12 +26,15 @@ def main(
     writing_mode: Optional[WritingMode] = None,
     known_words_list: Optional[str] = None,
     custom_word_list_path: Optional[str] = None,
+    custom_word_list_limit: Optional[int] = None,
 ):
     # Load the known words list if specified (custom path takes precedence)
     exclude_words = None
     if custom_word_list_path:
         logging.info("Loading custom word list from: %s", custom_word_list_path)
-        exclude_words = load_word_list_from_path(custom_word_list_path)
+        exclude_words = load_word_list_from_path(
+            custom_word_list_path, limit=custom_word_list_limit or 0
+        )
     elif known_words_list:
         logging.info("Loading known words list: %s", known_words_list)
         exclude_words = load_word_list(known_words_list)

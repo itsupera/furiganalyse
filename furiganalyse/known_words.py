@@ -106,12 +106,13 @@ def load_word_list(name: str) -> Set[str]:
     return words
 
 
-def load_word_list_from_path(filepath: str) -> Set[str]:
+def load_word_list_from_path(filepath: str, limit: int = 0) -> Set[str]:
     """
     Load a word list from an arbitrary file path (for user uploads).
 
     Args:
         filepath: The full path to the word list file.
+        limit: If > 0, only return the first `limit` words (preserving file order).
 
     Returns:
         A set of words from the file.
@@ -124,12 +125,17 @@ def load_word_list_from_path(filepath: str) -> Set[str]:
     if not path.exists():
         raise FileNotFoundError(f"Word list not found: {filepath}")
 
-    words = set()
+    # Read words preserving order
+    words_list = []
     with open(path, encoding="utf-8") as f:
         for line in f:
             word = line.strip()
             if word:
-                words.add(word)
+                words_list.append(word)
 
-    logging.info("Loaded %d words from %s", len(words), filepath)
-    return words
+    # Apply limit if specified
+    if limit > 0:
+        words_list = words_list[:limit]
+
+    logging.info("Loaded %d words from %s", len(words_list), filepath)
+    return set(words_list)
