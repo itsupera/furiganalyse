@@ -104,7 +104,11 @@ async def task_handler(
     # Write uploaded file to a temporary file
     task_folder = os.path.join(OUTPUT_FOLDER, str(new_task.uid))
     Path(task_folder).mkdir(exist_ok=True)
-    tmpfile = os.path.join(task_folder, file.filename)
+    # Sanitize filename to prevent path traversal attacks
+    safe_filename = os.path.basename(file.filename)
+    if not safe_filename:
+        safe_filename = "uploaded_file"
+    tmpfile = os.path.join(task_folder, safe_filename)
     contents = file.file.read()
     with open(tmpfile, 'wb') as f:
         f.write(contents)
@@ -137,7 +141,7 @@ async def task_handler(
         start_furiganalyse_task,
         new_task.uid,
         task_folder,
-        file.filename,
+        safe_filename,
         of,
         furigana_mode,
         writing_mode,
